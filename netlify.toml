@@ -1,0 +1,4 @@
+# Netlify publikuje gotowy folder site/ – bez budowania na serwerze (oszczędza kredyty i minuty).
+[build]
+  publish = "site"
+  command = ""
