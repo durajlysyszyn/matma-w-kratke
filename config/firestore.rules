@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function hasEmail() { return signedIn() && request.auth.token.email is string; }
+    function verified() { return request.auth.token.email_verified == true; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function myInvitePath() { return /databases/$(database)/documents/invites/$(myEmail()); }
+    // Konto ucznia = adres e-mail, który rodzic połączył (dokument invites/<adres>).
+    function isLinkedChild() { return hasEmail() && exists(myInvitePath()); }
+
+    // Dziecko ma dostęp tylko do swojego zapisu postępów (p_<id>) u rodzica, który je połączył.
+    function isChildOf(parentUid, docName) {
+      return hasEmail() && verified()
+        && exists(myInvitePath())
+        && get(myInvitePath()).data.parent == parentUid
+        && docName == 'p_' + get(myInvitePath()).data.pid;
+    }
+
+    // Dane rodzica: lista dzieci (index) i postępy każdego dziecka (p_<id>).
+    // Konto połączone jako konto ucznia NIE może prowadzić własnych danych rodzica
+    // (uczeń nie zakłada konta sam – nawet z pominięciem interfejsu).
+    match /users/{uid}/docs/{doc} {
+      allow read: if signedIn() && ((request.auth.uid == uid && !isLinkedChild()) || isChildOf(uid, doc));
+      allow write: if signedIn() && ((request.auth.uid == uid && !isLinkedChild()) || isChildOf(uid, doc));
+    }
+
+    // Połączenie konta Google dziecka z kontem rodzica. Klucz dokumentu = adres e-mail dziecka (małymi literami).
+    // Łączyć może tylko rodzic z potwierdzonym adresem e-mail, który sam nie jest kontem ucznia,
+    // i nie może połączyć własnego adresu.
+    match /invites/{email} {
+      allow read: if signedIn() && (
+        (hasEmail() && verified() && myEmail() == email)
+        || resource.data.parent == request.auth.uid);
+      allow create: if hasEmail() && verified() && !isLinkedChild()
+        && email == email.lower() && email != myEmail()
+        && request.resource.data.parent == request.auth.uid
+        && request.resource.data.pid is string;
+      allow update: if hasEmail() && verified() && resource.data.parent == request.auth.uid
+        && request.resource.data.parent == request.auth.uid && request.resource.data.pid is string;
+      allow delete: if signedIn() && resource.data.parent == request.auth.uid;
+    }
+  }
+}

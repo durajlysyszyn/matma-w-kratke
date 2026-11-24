@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Instrukcja – Matma w kratkę na własnym serwerze</title>
+<style>body{font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 60px;color:#1c2130;background:#fbfbf8}h1{font-size:30px;line-height:1.15}h2{margin-top:34px;padding-top:14px;border-top:2px solid #e3e8f3}ol li{margin:8px 0}code,kbd{background:#eef1fb;padding:1px 6px;border-radius:5px;font-size:15px}.box{background:#fff4c2;border-radius:12px;padding:12px 16px;margin:14px 0}.ok{background:#e1f5ec}.muted{color:#5d6478;font-size:14px}b.ui{background:#e8ecff;color:#2f4bd8;padding:0 6px;border-radius:5px;font-weight:600}</style></head><body>
+<h1>Matma w kratkę na własnej stronie, z logowaniem kontem Google</h1>
+<p>W tym folderze są:</p>
+<ul><li><code>index.html</code> – cała aplikacja,</li><li><code>firebase-config.js</code> – ustawienia logowania (trzeba w nim wkleić kilka linijek),</li><li><code>firestore.rules</code> – reguły bezpieczeństwa bazy danych,</li><li>ta instrukcja.</li></ul>
+<div class="box ok"><b>Najkrócej:</b> zakładasz bezpłatny projekt Firebase (logowanie Google + baza na postępy), wklejasz jego ustawienia do <code>firebase-config.js</code>, wrzucasz folder na hosting i dopisujesz adres strony w Firebase. Zajmie to ok. 20–30 minut, robi się to raz.</div>
+<p class="muted">Bez tych kroków aplikacja też działa – wystarczy wrzucić folder na dowolny hosting albo otworzyć <code>index.html</code> z dysku. Wtedy jednak postępy zapisują się tylko w przeglądarce, na której dziecko ćwiczy.</p>
+
+<h2>1. Załóż projekt Firebase (bezpłatny)</h2>
+<ol>
+<li>Wejdź na <b>console.firebase.google.com</b> i zaloguj się swoim kontem Google (tym, którym będziecie logować się w aplikacji – może być też inne).</li>
+<li>Kliknij <b class="ui">Utwórz projekt</b> / <b class="ui">Create a project</b>, wpisz nazwę, np. <code>matma-w-kratke</code>. Google Analytics możesz wyłączyć. Kliknij <b class="ui">Utwórz projekt</b>.</li>
+<li>Zostaniesz na bezpłatnym planie <b>Spark</b> – nie podawaj karty, nie jest potrzebna.</li>
+</ol>
+
+<h2>2. Włącz logowanie kontem Google</h2>
+<ol>
+<li>W menu po lewej: <b class="ui">Kompilacja</b> / <b class="ui">Build</b> → <b class="ui">Authentication</b> → <b class="ui">Rozpocznij</b> / <b class="ui">Get started</b>.</li>
+<li>Zakładka <b class="ui">Metoda logowania</b> / <b class="ui">Sign-in method</b> → wybierz <b>Google</b> → przełącz <b class="ui">Włącz</b> / <b class="ui">Enable</b> → wybierz swój e-mail jako adres pomocy → <b class="ui">Zapisz</b>.</li>
+<li>W tej samej zakładce kliknij <b class="ui">Dodaj nowego dostawcę</b> / <b class="ui">Add new provider</b> → <b>E-mail/hasło</b> / <b>Email/Password</b> → włącz tylko pierwszy przełącznik (bez „linku e-mail”) → <b class="ui">Zapisz</b>. Dzięki temu rodzic może założyć konto e-mailem i hasłem. Uczniowie logują się wyłącznie kontem Google połączonym przez rodzica.</li>
+</ol>
+
+<h2>3. Utwórz bazę na postępy (Firestore)</h2>
+<ol>
+<li><b class="ui">Kompilacja</b> / <b class="ui">Build</b> → <b class="ui">Firestore Database</b> → <b class="ui">Utwórz bazę danych</b> / <b class="ui">Create database</b>.</li>
+<li>Lokalizacja: wybierz europejską, np. <code>europe-central2 (Warszawa)</code>. Tryb: <b>produkcyjny</b> / <b>production mode</b>. Kliknij <b class="ui">Utwórz</b>.</li>
+<li>Przejdź do zakładki <b class="ui">Reguły</b> / <b class="ui">Rules</b>. Usuń to, co tam jest, i wklej całą zawartość pliku <code>firestore.rules</code> (otwórz go Notatnikiem). Kliknij <b class="ui">Opublikuj</b> / <b class="ui">Publish</b>.</li>
+</ol>
+<div class="box">Te reguły sprawiają, że rodzic widzi wyłącznie swoje dane, a dziecko – tylko swój zapis postępów. Bez nich baza by nie działała albo byłaby niebezpieczna – nie pomijaj tego kroku.</div>
+
+<h2>4. Skopiuj ustawienia do pliku firebase-config.js</h2>
+<ol>
+<li>Kliknij koło zębate obok <b class="ui">Przegląd projektu</b> → <b class="ui">Ustawienia projektu</b> / <b class="ui">Project settings</b>.</li>
+<li>Na dole, w części <b class="ui">Twoje aplikacje</b> / <b class="ui">Your apps</b>, kliknij ikonę <code>&lt;/&gt;</code> (Web). Wpisz dowolną nazwę i kliknij <b class="ui">Zarejestruj aplikację</b>. Nie zaznaczaj Firebase Hosting.</li>
+<li>Pojawi się kod. Skopiuj z niego tylko blok zaczynający się od <code>const firebaseConfig = {</code> i kończący się na <code>};</code>.</li>
+<li>Otwórz plik <code>firebase-config.js</code> Notatnikiem i <b>zamień</b> linijkę <code>const firebaseConfig = null;</code> na skopiowany blok. Zapisz plik.</li>
+</ol>
+<p class="muted">Wartość <code>apiKey</code> w tym pliku nie jest hasłem – tak jest zaprojektowany Firebase. Dane chronią reguły z kroku 3.</p>
+
+<h2>5. Wrzuć folder na hosting</h2>
+<p><b>Opcja A – Netlify (bezpłatnie, bez FTP):</b></p>
+<ol>
+<li>Załóż darmowe konto na <b>netlify.com</b> (możesz zalogować się kontem Google).</li>
+<li>Wybierz <b class="ui">Add new project</b> → <b class="ui">Deploy manually</b> i przeciągnij cały folder <code>matma-w-kratke</code>.</li>
+<li>Dostaniesz adres w rodzaju <code>https://cos-tam-123.netlify.app</code> – możesz zmienić nazwę w ustawieniach strony.</li>
+</ol>
+<p class="muted">Uwaga: na stronie Netlify Drop da się też wrzucić folder bez konta, ale taka strona jest kasowana po godzinie, jeśli nie zostanie przypisana do konta.</p>
+<p><b>Opcja B – własny hosting / serwer:</b> wgraj wszystkie pliki z folderu (np. przez FTP) do wybranego katalogu, np. <code>public_html/matma</code>. Strona musi działać przez <b>https</b>.</p>
+
+<h2>6. Dopisz adres strony w Firebase</h2>
+<ol>
+<li>W Firebase: <b class="ui">Authentication</b> → <b class="ui">Ustawienia</b> / <b class="ui">Settings</b> → <b class="ui">Autoryzowane domeny</b> / <b class="ui">Authorized domains</b> → <b class="ui">Dodaj domenę</b>.</li>
+<li>Wpisz sam adres bez <code>https://</code> i bez ukośników, np. <code>cos-tam-123.netlify.app</code> albo <code>twojadomena.pl</code>.</li>
+</ol>
+
+<h2>7. Gotowe</h2>
+<ol>
+<li>Otwórz adres strony. Na ekranie <b>„Kim jesteś?”</b> wybierz <b class="ui">Jestem rodzicem</b> → <b class="ui">Załóż konto rodzica</b> (e-mail i hasło, potem potwierdź adres linkiem z wiadomości) albo <b class="ui">Kontynuuj z Google</b>.</li>
+<li>Utwórz profile dzieci (imię, klasa, awatar) i połącz konto Google każdego dziecka, które ma logować się samo. Dziecko wybiera potem <b class="ui">Jestem uczniem</b> → <b class="ui">Zaloguj się jako uczeń</b>. Dziecko nie może założyć konta samo: niepołączone konto Google nie wpuści go do aplikacji. Jeśli dzieci ćwiczyły już wcześniej w tej przeglądarce bez logowania, ich postępy zostaną przeniesione na konto.</li>
+<li>Na innym komputerze lub telefonie: ten sam adres, to samo konto Google – pojawią się wszystkie dzieci z postępami.</li>
+</ol>
+<div class="box"><b>Na komputerze, z którego korzysta ktoś obcy</b> (np. w szkole): po nauce wejdź w <b class="ui">Rodzic</b> → <b class="ui">Wyloguj z tego komputera</b>. Postępy zostaną na koncie, a z przeglądarki znikną.</div>
+
+<h2>8. Konta Google dla dzieci (opcjonalnie)</h2>
+<p>Dziecko może logować się <b>własnym</b> kontem Google. Widzi wtedy tylko swoje lekcje, postępy i profil – bez panelu rodzica i bez rodzeństwa. Ty widzisz jego postępy w swoim panelu.</p>
+<ol>
+<li>Zaloguj się na stronie swoim kontem (rodzica) i utwórz konto dziecka (imię, klasa, awatar, zainteresowania).</li>
+<li>Wejdź w <b class="ui">Rodzic</b> → przy dziecku kliknij <b class="ui">Przypisz konto Google</b> → wpisz adres Gmail dziecka → <b class="ui">Zapisz</b>.</li>
+<li>Na komputerze dziecka: ten sam adres strony → <b class="ui">Zaloguj się kontem Google</b> → konto dziecka.</li>
+</ol>
+<div class="box"><b>Dziecko poniżej 13 lat</b> ma w Polsce konto Google nadzorowane w aplikacji <b>Family Link</b>. Przy pierwszym logowaniu na tej stronie Google może poprosić Ciebie o zgodę (powiadomienie w Family Link lub hasło rodzica). W Family Link: dziecko → <b class="ui">Ustawienia</b> / <b class="ui">Controls</b> → <b class="ui">Ustawienia konta</b> → <b class="ui">Aplikacje innych firm</b> / <b class="ui">Controls for third-party apps</b>. Strona prosi tylko o adres e-mail i nazwę konta.<br><br><b>Konto szkolne</b> (np. @szkola.edu.pl) może mieć zablokowane logowanie na zewnętrznych stronach przez administratora szkoły – wtedy użyj prywatnego konta Gmail.</div>
+<p class="muted">Jeśli dziecko ćwiczyło już wcześniej bez logowania na swoim komputerze: najpierw zaloguj się tam <b>swoim</b> kontem (postępy przejdą na Twoje konto), potem przypisz dziecku adres w panelu, wyloguj się i zaloguj dziecko.</p>
+<p class="muted">Dzieci bez własnego konta Google nadal mogą ćwiczyć na Twoim koncie – wybierając swoje imię po Twoim zalogowaniu.</p>
+
+<h2>Gdy coś nie działa</h2>
+<ul>
+<li><b>Logowanie od razu się zamyka albo pokazuje błąd „unauthorized-domain”</b> – adres strony nie został dopisany w kroku 6.</li>
+<li><b>Po zalogowaniu postępy się nie zapisują</b> – sprawdź, czy w kroku 3 opublikowano reguły i czy baza Firestore została utworzona.</li>
+<li><b>Dziecko po zalogowaniu widzi pusty ekran powitania zamiast swoich lekcji</b> – adres w panelu rodzica jest inny niż konto, którym się zalogowało, albo reguły z kroku 3 są w starej wersji (wklej je ponownie z pliku <code>firestore.rules</code>).</li>
+<li><b>Nie ma przycisku logowania</b> – w pliku <code>firebase-config.js</code> nadal jest <code>null</code> albo plik nie został wgrany na serwer.</li>
+<li><b>Otwierasz plik z dysku (dwuklik)</b> – logowanie Google działa tylko na stronie w internecie (https). Z dysku aplikacja działa bez logowania.</li>
+</ul>
+<p class="muted">Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar i postępy w nauce. Nie ma reklam ani śledzenia. Dane leżą w Twoim projekcie Firebase – możesz je w każdej chwili usunąć (w aplikacji: Rodzic → Usuń, albo w konsoli Firebase).</p>
+</body></html>
