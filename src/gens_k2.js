@@ -151,7 +151,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const wrong = [{ v: N(s + 1), code: 'calc' }, { v: N(s - 1), code: 'calc' }];
       if (carry) wrong.unshift({ v: N(noCarry(a, b)), code: 'k2_carry' });
       const toTen = 10 - a % 10;
-      return { prompt: 'Oblicz: ' + a + ' + ' + b, value: N(s), wrong,
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, false) : null;
+      return { prompt: story || 'Oblicz: ' + a + ' + ' + b, value: N(s), wrong,
         errorVersion: carry ? { steps: ['Jedności: ' + a % 10 + ' + ' + b % 10 + ' = ' + (a % 10 + b % 10) + ', piszę ' + (a % 10 + b % 10) % 10, 'Dziesiątki: ' + Math.floor(a / 10) + ' + ' + Math.floor(b / 10) + ' = ' + (Math.floor(a / 10) + Math.floor(b / 10)), 'Wynik: ' + noCarry(a, b)], wrongIdx: 1, code: 'k2_carry', why: 'Z jedności zrobiła się jeszcze jedna dziesiątka – trzeba ją dodać do dziesiątek.', intro: 'Kuba liczył i wyszło mu ' + noCarry(a, b) + '. Gdzie się pomylił?' } : null,
         hints: carry ? ['Dopełnij do pełnej dziesiątki.', b < 10 ? a + ' + ' + toTen + ' = ' + (a + toTen) + '. Zostaje jeszcze ' + (b - toTen) + '.' : 'Najpierw dodaj dziesiątki: ' + a + ' + ' + Math.floor(b / 10) * 10 + ' = ' + (a + Math.floor(b / 10) * 10) + '.', b < 10 ? (a + toTen) + ' + ' + (b - toTen) + ' = ?' : 'Teraz dodaj jedności: ' + (a + Math.floor(b / 10) * 10) + ' + ' + b % 10 + '.']
           : ['Dodaj osobno dziesiątki i jedności.', 'Dziesiątki: ' + Math.floor(a / 10) + ' + ' + Math.floor(b / 10) + ', jedności: ' + a % 10 + ' + ' + b % 10 + '.', 'Połącz wynik.'],
@@ -173,7 +174,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const wrong = [{ v: N(v + 1), code: 'calc' }, { v: N(a + b), code: 'op_confuse' }];
       if (borrow) wrong.unshift({ v: N(flip), code: 'k2_borrow' }, { v: N(v + 10), code: 'k2_borrow' });
       const down = a % 10;
-      return { prompt: 'Oblicz: ' + a + ' − ' + b, value: N(v), wrong,
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, true) : null;
+      return { prompt: story || 'Oblicz: ' + a + ' − ' + b, value: N(v), wrong,
         errorVersion: borrow ? { steps: ['Jedności: ' + b % 10 + ' − ' + a % 10 + ' = ' + Math.abs(a % 10 - b % 10), 'Dziesiątki: ' + Math.floor(a / 10) + ' − ' + Math.floor(b / 10) + ' = ' + (Math.floor(a / 10) - Math.floor(b / 10)), 'Wynik: ' + flip], wrongIdx: 0, code: 'k2_borrow', why: 'Nie wolno odwracać odejmowania! Z ' + a % 10 + ' nie odejmiesz ' + b % 10 + ' – trzeba „rozmienić" jedną dziesiątkę.', intro: 'Ola liczyła i wyszło jej ' + flip + '. Gdzie się pomyliła?' } : null,
         hints: borrow ? ['Odejmuj „do pełnej dziesiątki".', b < 10 ? a + ' − ' + down + ' = ' + (a - down) + '. Musisz odjąć jeszcze ' + (b - down) + '.' : 'Najpierw odejmij dziesiątki: ' + a + ' − ' + Math.floor(b / 10) * 10 + ' = ' + (a - Math.floor(b / 10) * 10) + '.', b < 10 ? (a - down) + ' − ' + (b - down) + ' = ?' : 'Teraz odejmij jedności: ' + (a - Math.floor(b / 10) * 10) + ' − ' + b % 10 + '.']
           : ['Odejmij osobno dziesiątki i jedności.', 'Dziesiątki: ' + Math.floor(a / 10) + ' − ' + Math.floor(b / 10) + ', jedności: ' + a % 10 + ' − ' + b % 10 + '.', 'Sprawdź dodawaniem: wynik + ' + b + ' powinno dać ' + a + '.'],
@@ -261,7 +263,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       if (d === 2) { const T = (MP.th().k2t) || MP.THEMES.szkola.k2t; const pay = r.pick([10, 20, 50]), price = r.int(2, pay - 2);
         return { visual: MP.moneySvg([{ v: pay, u: 'zł' }]), prompt: 'Kupujesz ' + T[0] + ' za ' + price + ' zł. Płacisz banknotem ' + pay + ' zł. Ile dostaniesz reszty?', value: N(pay - price), wrong: [{ v: N(pay + price), code: 'op_confuse' }, { v: N(price), code: 'read' }], hints: ['Reszta to to, co zostaje z banknotu po zapłaceniu.', 'Działanie: ' + pay + ' − ' + price + '.', 'Sprawdź: ' + price + ' + reszta = ' + pay + '.'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' zł'] }; }
       const z = r.int(1, 5), g = r.pick([0, 20, 50, 70, 10]);
-      return { prompt: z + ' zł ' + (g ? g + ' gr ' : '') + '= □ gr', fill: true, value: N(z * 100 + g), wrong: [{ v: N(z * 10 + g), code: 'k2_zlgr' }, { v: N(z + g), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', g ? 'Dodaj jeszcze ' + g + ' gr.' : 'To już wszystko.'], sol: [z + ' zł = ' + z * 100 + ' gr', (g ? z * 100 + ' + ' + g + ' = ' : '') + (z * 100 + g) + ' gr'] };
+      return { visual: MP.moneySvg(Array.from({ length: z }, () => ({ v: 1, u: 'zł' })).concat(MP.moneyList(0, g))), prompt: z + ' zł ' + (g ? g + ' gr ' : '') + '= □ gr', fill: true, value: N(z * 100 + g), wrong: [{ v: N(z * 10 + g), code: 'k2_zlgr' }, { v: N(z + g), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', g ? 'Dodaj jeszcze ' + g + ' gr.' : 'To już wszystko.'], sol: [z + ' zł = ' + z * 100 + ' gr', (g ? z * 100 + ' + ' + g + ' = ' : '') + (z * 100 + g) + ' gr'] };
     }
   });
 

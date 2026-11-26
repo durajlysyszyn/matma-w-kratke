@@ -177,7 +177,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       if (d === 2) { const T = nouns(); const pay = r.pick([10, 20]), price = r.int(2, pay - 1);
         return { visual: MP.moneySvg([{ v: pay, u: 'zł' }]), prompt: 'Kupujesz ' + T[0] + ' za ' + price + ' zł i płacisz banknotem ' + pay + ' zł. Ile reszty dostaniesz?', value: N(pay - price), wrong: [{ v: N(pay + price), code: 'op_confuse' }, { v: N(price), code: 'read' }], hints: ['Reszta to to, co zostanie z banknotu.', 'Działanie: ' + pay + ' − ' + price + '.', 'Sprawdź: ' + price + ' + reszta = ' + pay + '.'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' zł'] }; }
       const z = r.int(1, 5);
-      return { prompt: 'Ile groszy to ' + z + ' ' + pl(z, 'złoty', 'złote', 'złotych') + '?', value: N(z * 100), wrong: [{ v: N(z * 10), code: 'k2_zlgr' }, { v: N(z), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' razy po 100 groszy.', z > 1 ? Array(z).fill(100).join(' + ') + ' = ?' : 'To dokładnie 100 gr.'], sol: [z + ' zł = ' + z * 100 + ' gr'] };
+      return { visual: MP.moneySvg(Array.from({ length: z }, () => ({ v: 1, u: 'zł' }))), prompt: 'Ile groszy to ' + z + ' ' + pl(z, 'złoty', 'złote', 'złotych') + '?', value: N(z * 100), wrong: [{ v: N(z * 10), code: 'k2_zlgr' }, { v: N(z), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' razy po 100 groszy.', z > 1 ? Array(z).fill(100).join(' + ') + ' = ?' : 'To dokładnie 100 gr.'], sol: [z + ' zł = ' + z * 100 + ' gr'] };
     }
   });
 
@@ -270,7 +270,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const v = sub ? a - b : a + b; const op = sub ? ' − ' : ' + ';
       const H = Math.floor(b / 100) * 100, T = Math.floor(b % 100 / 10) * 10, J = b % 10;
       const steps = []; let cur = a; [[H, 'setki'], [T, 'dziesiątki'], [J, 'jedności']].forEach(([x]) => { if (x) { const nx = sub ? cur - x : cur + x; steps.push(cur + op + x + ' = ' + nx); cur = nx; } });
-      return { prompt: 'Oblicz: ' + a + op + b, value: N(v), wrong: [{ v: N(sub ? a + b : Math.abs(a - b)), code: 'op_confuse' }, { v: N(sub ? v + 10 : v - 10), code: 'calc' }, { v: N(sub ? v - 100 : v + 100), code: 'k3_place' }].filter(w => w.v.n >= 0 && w.v.n !== v),
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, sub) : null;
+      return { prompt: story || 'Oblicz: ' + a + op + b, value: N(v), wrong: [{ v: N(sub ? a + b : Math.abs(a - b)), code: 'op_confuse' }, { v: N(sub ? v + 10 : v - 10), code: 'calc' }, { v: N(sub ? v - 100 : v + 100), code: 'k3_place' }].filter(w => w.v.n >= 0 && w.v.n !== v),
         hints: ['Rozłóż drugą liczbę na setki, dziesiątki i jedności: ' + [H, T, J].filter(Boolean).join(' + ') + '.', sub ? 'Odejmuj po kolei: najpierw setki, potem dziesiątki, na końcu jedności.' : 'Dodawaj po kolei: najpierw setki, potem dziesiątki, na końcu jedności.', steps[0] ? 'Pierwszy krok: ' + steps[0] + '.' : 'Policz.'], sol: steps.length ? steps : [a + op + b + ' = ' + v] };
     }
   });
@@ -306,11 +307,11 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Obliczenia pieniężne', grade: 3, mainCode: 'k3_gr', prereq: ['k3_add'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      if (d === 1) { const z = r.int(1, 9), g = r.pick([10, 20, 50, 80, 5]); return { prompt: 'Ile groszy to ' + z + ' zł ' + g + ' gr?', value: N(z * 100 + g), unit: 'gr', wrong: [{ v: N(z * 10 + g), code: 'k3_gr' }, { v: N(z + g), code: 'k3_gr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', z * 100 + ' + ' + g + ' = ?'], sol: [z + ' zł = ' + z * 100 + ' gr', z * 100 + ' + ' + g + ' = ' + (z * 100 + g) + ' gr'] }; }
+      if (d === 1) { const z = r.int(1, 9), g = r.pick([10, 20, 50, 80, 5]); return { visual: MP.moneySvg(MP.moneyList(z, g)), prompt: 'Ile groszy to ' + z + ' zł ' + g + ' gr?', value: N(z * 100 + g), unit: 'gr', wrong: [{ v: N(z * 10 + g), code: 'k3_gr' }, { v: N(z + g), code: 'k3_gr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', z * 100 + ' + ' + g + ' = ?'], sol: [z + ' zł = ' + z * 100 + ' gr', z * 100 + ' + ' + g + ' = ' + (z * 100 + g) + ' gr'] }; }
       if (d === 2) { const a = r.int(1, 4) * 100 + r.pick([50, 60, 70, 80]), b = r.int(1, 3) * 100 + r.pick([40, 50, 60, 70]); const s = a + b; const z = Math.floor(s / 100), g = s % 100;
         return { prompt: 'Lizak kosztuje ' + U.money(a) + ' zł, a sok ' + U.money(b) + ' zł. Ile groszy kosztują razem?', value: N(s), unit: 'gr', wrong: [{ v: N(Math.floor(a / 100) * 100 + Math.floor(b / 100) * 100 + (a % 100 + b % 100) % 100), code: 'k3_gr' }, { v: N(s + 100), code: 'calc' }], hints: ['Zamień ceny na grosze: ' + U.money(a) + ' zł = ' + a + ' gr.', U.money(b) + ' zł = ' + b + ' gr.', a + ' + ' + b + ' = ?'], sol: [a + ' gr + ' + b + ' gr = ' + s + ' gr', s + ' gr = ' + z + ' zł ' + g + ' gr'] }; }
       const price = r.int(2, 8) * 100 + r.pick([20, 40, 50, 70, 90]), pay = [500, 1000, 2000].find(x => x > price);
-      return { prompt: 'Zeszyt kosztuje ' + U.money(price) + ' zł. Płacisz ' + pay / 100 + ' zł. Ile groszy reszty dostaniesz?', value: N(pay - price), unit: 'gr', wrong: [{ v: N(pay / 100 * 100 - Math.floor(price / 100) * 100 - (100 - price % 100)), code: 'calc' }, { v: N(Math.abs(pay - price - 100)), code: 'k3_gr' }, { v: N(price), code: 'read' }].filter(w => w.v.n > 0 && w.v.n !== pay - price), hints: ['Zamień wszystko na grosze.', pay / 100 + ' zł = ' + pay + ' gr, ' + U.money(price) + ' zł = ' + price + ' gr.', pay + ' − ' + price + ' = ?'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' gr', 'To ' + U.money(pay - price) + ' zł.'] };
+      return { visual: MP.moneySvg([{ v: pay / 100, u: 'zł' }]), prompt: 'Zeszyt kosztuje ' + U.money(price) + ' zł. Płacisz ' + pay / 100 + ' zł. Ile groszy reszty dostaniesz?', value: N(pay - price), unit: 'gr', wrong: [{ v: N(pay / 100 * 100 - Math.floor(price / 100) * 100 - (100 - price % 100)), code: 'calc' }, { v: N(Math.abs(pay - price - 100)), code: 'k3_gr' }, { v: N(price), code: 'read' }].filter(w => w.v.n > 0 && w.v.n !== pay - price), hints: ['Zamień wszystko na grosze.', pay / 100 + ' zł = ' + pay + ' gr, ' + U.money(price) + ' zł = ' + price + ' gr.', pay + ' − ' + price + ' = ?'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' gr', 'To ' + U.money(pay - price) + ' zł.'] };
     }
   });
 

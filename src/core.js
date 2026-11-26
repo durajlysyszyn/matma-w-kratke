@@ -302,6 +302,10 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP = (typeof wind
     return '<svg viewBox="0 0 ' + Math.max(60, x) + ' ' + H + '" class="vis money" role="img" aria-label="' + list.map(m => m.v + ' ' + m.u).join(', ') + '" style="max-width:' + Math.min(100, Math.max(30, x / 6)) + '%">' + out + '</svg>';
   }
   MP.moneySvg = moneySvg;
+  // rozkład kwoty na najmniejszą liczbę monet (zł: 5, 2, 1; gr: 50, 20, 10, 5, 2, 1) – do rysunku
+  MP.moneyList = (zl, gr) => { const out = []; let z = zl || 0, g = gr || 0;
+    [5, 2, 1].forEach(v => { while (z >= v) { out.push({ v, u: 'zł' }); z -= v; } });
+    [50, 20, 10, 5, 2, 1].forEach(v => { while (g >= v) { out.push({ v, u: 'gr' }); g -= v; } }); return out; };
   MP.util = { rng, gcd, lcm, F, red, add, sub, mul, div, eq, val, isSimplest, fromDec, fracM, fmtF, fmtImp, fmtDec, fmtDecK, fmtNum, plain, parseNum, pl, money };
   MP.items = { check, checkNum, asInput, asChoice, asError, asWhy, build };
 })(MP);

@@ -400,6 +400,18 @@ details.more summary{cursor:pointer;color:var(--pen);font-size:14px;margin:-4px 
 .nextstep{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:16px 18px;border-radius:16px;background:var(--pen);color:var(--pen-ink);margin-bottom:16px}.nextstep .lbl{font-size:13px;opacity:.85}.nextstep h2{margin:2px 0 0;color:inherit}.nextstep .btn{background:var(--hl);color:#1d1d1d;border-color:transparent}
 .map.big .drow .dn .dnw{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;overflow:visible;white-space:normal;font-size:inherit;color:inherit}.map.big .drow .dn .dzbadge{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap;overflow:visible;text-decoration:none}.map.big .drow .dn .dzbadge.ok{background:var(--ok-soft);color:var(--ok)}.map.big .drow .dn .dzbadge.rd{background:var(--warn-soft);color:var(--warn)}
 .lvlhelp{margin-top:10px}.lvlhelp summary{cursor:pointer;color:var(--pen);font-weight:600}.lvlhelp dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:10px 0}.lvlhelp dt{font-weight:700}.lvlhelp dd{margin:0}
+
+/* minigry */
+.goffer{margin:14px 0;padding:14px;border-radius:var(--r);background:var(--hl-soft);border:1px solid var(--hl)}.goffer p{margin:0 0 6px}
+.game .ghead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.game .ghead b{font-size:20px}
+.ggoal{font-size:20px}.ggoal .gfr,.gitem .gfr{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05;vertical-align:middle}.gfr i{font-style:normal}.gfr i:first-child{border-bottom:2px solid currentColor;padding:0 3px}
+.gbar{display:flex;align-items:center;gap:10px;font-weight:700}.gsc{min-width:36px;font-size:22px;color:var(--ok)}.gtgt{flex:1;color:var(--mute);font-weight:600}.gtime{width:90px;height:10px;border-radius:6px;background:var(--line);overflow:hidden}.gtime i{display:block;height:100%;width:100%;background:var(--pen)}
+.garea{position:relative;height:min(380px,58vh);margin-top:8px;border-radius:var(--r);border:1px solid var(--line);overflow:hidden;touch-action:manipulation;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;user-select:none;-webkit-user-select:none}
+.gitem{position:absolute;top:0;min-width:64px;min-height:52px;padding:6px 12px;border-radius:14px;border:2px solid var(--pen);background:var(--card);color:var(--ink);font:700 22px/1.1 inherit;font-family:inherit;cursor:pointer;will-change:transform;touch-action:manipulation}
+.gitem.gok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}.gitem.gno{background:var(--warn-soft);border-color:var(--warn);opacity:.7}.gitem small{font-size:14px}
+.gwhy{min-height:1.4em;margin:8px 0 0;color:var(--mute)}.gbig{font-size:26px;margin:6px 0}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+@media(pointer:coarse){.btn.sm{min-height:44px}.map.big .cell{width:44px;height:44px}.map.big .sq{gap:6px}}
 </style>
 </head>
 <body>
@@ -407,6 +419,7 @@ details.more summary{cursor:pointer;color:var(--pen);font-size:14px;margin:-4px 
   <button class="brand" data-go="start" aria-label="Strona główna"><i><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></i><span>Matma w kratkę</span></button>
   <nav aria-label="Menu główne"></nav>
 </div></header>
+<div id="srlive" class="sr-only" role="status" aria-live="polite"></div>
 <main id="app"><p class="muted">Wczytywanie…</p></main>
 <div id="toast"></div>
 <link rel="stylesheet" href="vendor/katex.css">
@@ -432,6 +445,7 @@ details.more summary{cursor:pointer;color:var(--pen);font-size:14px;margin:-4px 
 <script src="interact.js"></script>
 <script src="authviews.js"></script>
 <script src="helpers.js"></script>
+<script src="games.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

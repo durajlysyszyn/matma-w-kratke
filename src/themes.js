@@ -439,4 +439,11 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
   MP.interests = [];             // ustawiane przez UI z profilu ucznia
   MP.curTheme = T.szkola;        // motyw bieżącego zadania (ustawiany przez buildItem)
   MP.th = () => { MP.themeUsed = true; return MP.curTheme || T.szkola; };
+  // krótka historyjka z zainteresowań ucznia do prostego dodawania/odejmowania (kl. 1–3); null = zostaje samo działanie.
+  // Losowanie na końcu generatora, więc liczby w zadaniu się nie zmieniają.
+  MP.storyAS = (r, a, b, sub) => {
+    const th = MP.curTheme; if (!th || th.id === 'szkola' || !th.k2t || !r.chance(0.4)) return null;
+    MP.themeUsed = true; const W = th.k2t, t = (n) => n + ' ' + p(n, W[0], W[1], W[2]);
+    return ('Masz ' + t(a) + '. ' + (sub ? 'Oddajesz ' + b + '. Ile Ci zostało?' : 'Dostajesz jeszcze ' + b + '. Ile masz teraz?')) + '<br><b>' + a + (sub ? ' − ' : ' + ') + b + ' = ?</b>';
+  };
 })(MP);
