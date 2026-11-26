@@ -2,11 +2,11 @@
 import asyncio, json, os, re
 from playwright.async_api import async_playwright
 from fbmock import MOCK
-URL = 'http://localhost:8766/index.html'; OUT = 'wyniki/manual'; os.makedirs(OUT, exist_ok=True)
+URL = 'http://localhost:8766/index.html'; OUT = '/home/claude/ux/manual'; os.makedirs(OUT, exist_ok=True)
 CFG = "window.MWK_FIREBASE={apiKey:'x',authDomain:'x',projectId:'x'};"
 RES = []
 def ok(c, m, note=''): RES.append({'ok': bool(c), 'm': m, 'note': note}); print(('  ✓ ' if c else '  ✗ ') + m + ((' — ' + note) if note else ''))
-ANS = r"""(()=>{const c=window.__mp.S.session.cur; if(!c||c.card) return null; const it=MP.engine.buildItem(c.spec); const a=it.answer;
+ANS = r"""(()=>{const c=window.__mp.S.session&&window.__mp.S.session.cur; if(!c||c.card) return null; const it=MP.engine.buildItem(c.spec); const a=it.answer;
   if(a.kind==='num'){const v=a.value; let s=(v.n<0?'-':'')+Math.abs(v.n)+(v.d>1?'/'+v.d:''); if(!MP.items.check(it,s).ok){const w=Math.trunc(Math.abs(v.n)/v.d),r=Math.abs(v.n)%v.d; s=(v.n<0?'-':'')+w+' '+r+'/'+v.d;} return {t:'num',v:s};}
   if(a.kind==='choice') return {t:'opt',v:a.correct}; return {t:'other',type:it.type};})()"""
 async def main():
