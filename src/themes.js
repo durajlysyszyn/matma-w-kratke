@@ -439,11 +439,88 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
   MP.interests = [];             // ustawiane przez UI z profilu ucznia
   MP.curTheme = T.szkola;        // motyw bieżącego zadania (ustawiany przez buildItem)
   MP.th = () => { MP.themeUsed = true; return MP.curTheme || T.szkola; };
-  // krótka historyjka z zainteresowań ucznia do prostego dodawania/odejmowania (kl. 1–3); null = zostaje samo działanie.
-  // Losowanie na końcu generatora, więc liczby w zadaniu się nie zmieniają.
+  // ---------- zadania z treścią kl. 1–3: wiele przedmiotów na każde zainteresowanie i różne historyjki ----------
+  // formy: [biernik l.poj. (1), l.mn. (2–4), dopełniacz l.mn. (5+)]; „w grze” = przedmiot wirtualny (bez pudełek i stołów)
+  const N3 = (s) => s.split('|').map(x => x.split('/'));
+  const K2N = {
+    szkola: N3('naklejkę/naklejki/naklejek|kredkę/kredki/kredek|zeszyt/zeszyty/zeszytów|gumkę/gumki/gumek|ołówek/ołówki/ołówków'),
+    kosmos: N3('naklejkę z rakietą/naklejki z rakietami/naklejek z rakietami|kartę z planetą/karty z planetami/kart z planetami|świecącą gwiazdkę/świecące gwiazdki/świecących gwiazdek|naszywkę misji/naszywki misji/naszywek misji|model rakiety/modele rakiet/modeli rakiet'),
+    ryby: N3('robaka na przynętę/robaki na przynętę/robaków na przynętę|haczyk/haczyki/haczyków|spławik/spławiki/spławików|błystkę/błystki/błystek|ciężarek/ciężarki/ciężarków'),
+    tornada: N3('zdjęcie burzy/zdjęcia burzy/zdjęć burzy|naklejkę z piorunem/naklejki z piorunami/naklejek z piorunami|kartę z chmurą/karty z chmurami/kart z chmurami|rysunek tornada/rysunki tornad/rysunków tornad|wiatraczek/wiatraczki/wiatraczków'),
+    pilka: N3('karteczkę z piłkarzem/karteczki z piłkarzami/karteczek z piłkarzami|piłkę/piłki/piłek|koszulkę/koszulki/koszulek|szalik kibica/szaliki kibica/szalików kibica|bilet na mecz/bilety na mecz/biletów na mecz'),
+    samoloty: N3('papierowy samolot/papierowe samoloty/papierowych samolotów|model samolotu/modele samolotów/modeli samolotów|naklejkę z samolotem/naklejki z samolotami/naklejek z samolotami|zdjęcie samolotu/zdjęcia samolotów/zdjęć samolotów|bilet lotniczy/bilety lotnicze/biletów lotniczych'),
+    gry: N3('monetę w grze/monety w grze/monet w grze|diament w grze/diamenty w grze/diamentów w grze|skrzynkę ze skarbem w grze/skrzynki ze skarbem w grze/skrzynek ze skarbem w grze|kartę z bohaterem/karty z bohaterami/kart z bohaterami|figurkę z gry/figurki z gry/figurek z gry'),
+    zwierzeta: N3('chrupkę dla psa/chrupki dla psa/chrupek dla psa|smakołyk dla kota/smakołyki dla kota/smakołyków dla kota|marchewkę dla królika/marchewki dla królika/marchewek dla królika|ziarenko dla chomika/ziarenka dla chomika/ziarenek dla chomika|naklejkę ze zwierzątkiem/naklejki ze zwierzątkami/naklejek ze zwierzątkami'),
+    dinozaury: N3('figurkę dinozaura/figurki dinozaurów/figurek dinozaurów|skamielinę/skamieliny/skamielin|kartę z dinozaurem/karty z dinozaurami/kart z dinozaurami|jajo dinozaura/jaja dinozaurów/jaj dinozaurów|naklejkę z T-Reksem/naklejki z T-Reksem/naklejek z T-Reksem'),
+    muzyka: N3('kostkę do gitary/kostki do gitary/kostek do gitary|płytę/płyty/płyt|strunę/struny/strun|bilet na koncert/bilety na koncert/biletów na koncert|naklejkę z nutką/naklejki z nutkami/naklejek z nutkami'),
+    gotowanie: N3('ciasteczko/ciasteczka/ciasteczek|babeczkę/babeczki/babeczek|truskawkę/truskawki/truskawek|jajko/jajka/jajek|naleśnik/naleśniki/naleśników'),
+    rower: N3('odblask/odblaski/odblasków|naklejkę na rower/naklejki na rower/naklejek na rower|dzwonek rowerowy/dzwonki rowerowe/dzwonków rowerowych|dętkę/dętki/dętek|kółko do hulajnogi/kółka do hulajnogi/kółek do hulajnogi'),
+    wyscigi: N3('resoraka/resoraki/resoraków|oponę/opony/opon|puchar/puchary/pucharów|flagę w szachownicę/flagi w szachownicę/flag w szachownicę|bilet na wyścig/bilety na wyścig/biletów na wyścig'),
+    klocki: N3('klocek/klocki/klocków|ludzika z klocków/ludziki z klocków/ludzików z klocków|płytkę konstrukcyjną/płytki konstrukcyjne/płytek konstrukcyjnych|okienko z klocków/okienka z klocków/okienek z klocków|kółko z klocków/kółka z klocków/kółek z klocków'),
+    oceany: N3('muszelkę/muszelki/muszelek|rozgwiazdę z plastiku/rozgwiazdy z plastiku/rozgwiazd z plastiku|perłę/perły/pereł|kamyk z plaży/kamyki z plaży/kamyków z plaży|naklejkę z rybką/naklejki z rybkami/naklejek z rybkami'),
+    gory: N3('kamyk/kamyki/kamyków|szyszkę/szyszki/szyszek|karabińczyk/karabińczyki/karabińczyków|odznakę turystyczną/odznaki turystyczne/odznak turystycznych|pocztówkę z gór/pocztówki z gór/pocztówek z gór'),
+    kosz: N3('piłkę do kosza/piłki do kosza/piłek do kosza|kartę z koszykarzem/karty z koszykarzami/kart z koszykarzami|opaskę na rękę/opaski na rękę/opasek na rękę|bilet na mecz/bilety na mecz/biletów na mecz|koszulkę drużyny/koszulki drużyny/koszulek drużyny'),
+    rysowanie: N3('kredkę/kredki/kredek|flamaster/flamastry/flamastrów|kartkę/kartki/kartek|komiks/komiksy/komiksów|pędzelek/pędzelki/pędzelków'),
+    konie: N3('marchewkę dla konia/marchewki dla konia/marchewek dla konia|kostkę cukru/kostki cukru/kostek cukru|podkowę/podkowy/podków|rozetę z zawodów/rozety z zawodów/rozet z zawodów|jabłko dla konia/jabłka dla konia/jabłek dla konia'),
+    taniec: N3('cekin/cekiny/cekinów|wstążkę/wstążki/wstążek|spinkę do włosów/spinki do włosów/spinek do włosów|medal/medale/medali|bilet na pokaz/bilety na pokaz/biletów na pokaz'),
+    moda: N3('guzik/guziki/guzików|łatkę/łatki/łatek|szpulkę nici/szpulki nici/szpulek nici|wieszak/wieszaki/wieszaków|kawałek materiału/kawałki materiału/kawałków materiału'),
+    lyzwy: N3('naklejkę z łyżwą/naklejki z łyżwami/naklejek z łyżwami|medal/medale/medali|wstążkę do gimnastyki/wstążki do gimnastyki/wstążek do gimnastyki|bilet na lodowisko/bilety na lodowisko/biletów na lodowisko|ochraniacz/ochraniacze/ochraniaczy'),
+    ogrod: N3('nasionko/nasionka/nasionek|doniczkę/doniczki/doniczek|tulipana/tulipany/tulipanów|sadzonkę/sadzonki/sadzonek|truskawkę/truskawki/truskawek'),
+    teatr: N3('bilet do kina/bilety do kina/biletów do kina|maskę/maski/masek|kostium/kostiumy/kostiumów|plakat/plakaty/plakatów|bilet do teatru/bilety do teatru/biletów do teatru'),
+    podroze: N3('pocztówkę/pocztówki/pocztówek|magnes na lodówkę/magnesy na lodówkę/magnesów na lodówkę|znaczek/znaczki/znaczków|zdjęcie z podróży/zdjęcia z podróży/zdjęć z podróży|muszelkę/muszelki/muszelek'),
+    eksperymenty: N3('probówkę/probówki/probówek|magnes/magnesy/magnesów|kryształ/kryształy/kryształów|baterię/baterie/baterii|szkiełko/szkiełka/szkiełek'),
+    rekodzielo: N3('koralik/koraliki/koralików|bransoletkę/bransoletki/bransoletek|kłębek włóczki/kłębki włóczki/kłębków włóczki|pompon/pompony/pomponów|guzik/guziki/guzików'),
+    siatkowka: N3('piłkę do siatkówki/piłki do siatkówki/piłek do siatkówki|kartę z siatkarką/karty z siatkarkami/kart z siatkarkami|nakolannik/nakolanniki/nakolanników|bilet na mecz/bilety na mecz/biletów na mecz|koszulkę drużyny/koszulki drużyny/koszulek drużyny'),
+    swinki: N3('jabłko dla świnki/jabłka dla świnki/jabłek dla świnki|marchewkę dla świnki/marchewki dla świnki/marchewek dla świnki|naklejkę ze świnką/naklejki ze świnkami/naklejek ze świnkami|maskotkę świnki/maskotki świnek/maskotek świnek|kolbę kukurydzy/kolby kukurydzy/kolb kukurydzy'),
+    literatura: N3('zakładkę do książki/zakładki do książki/zakładek do książki|książkę/książki/książek|komiks/komiksy/komiksów|naklejkę z bohaterem/naklejki z bohaterami/naklejek z bohaterami|pocztówkę z ilustracją/pocztówki z ilustracjami/pocztówek z ilustracjami'),
+  };
+  Object.keys(K2N).forEach(k => { if (T[k]) T[k].k2n = K2N[k]; });
+  // przedmiot do zadania: losowy z listy motywu bieżącego zadania
+  MP.k2noun = (r, real) => { const th = MP.th(); let L = th.k2n || [th.k2t || T.szkola.k2t]; if (real) { const L2 = L.filter(w => !/ w grze$/.test(w[0])); L = L2.length ? L2 : T.szkola.k2n; } return r.pick(L); }; // real: bez przedmiotów z gier (nie kupujemy ich za prawdziwe pieniądze)
+  const virt = (W) => / w grze$/.test(W[0]);
+  const V2 = (n, sg, pl) => few(n) ? pl : sg; // zgoda czasownika z liczbą: „leżą 3”, „leży 5”
+  const DEFKIDS = [['Ola', 'f'], ['Kuba', 'm'], ['Zosia', 'f'], ['Antek', 'm'], ['Hania', 'f'], ['Staś', 'm'], ['Lena', 'f'], ['Franek', 'm'], ['Maja', 'f'], ['Tymek', 'm']];
+  const vg = (g, m, f) => g === 'f' ? f : m;
+  // historyjka do działania: op = add (a + b), sub (a − b, a > b), mul (a grup po b), div (a·b rozdzielone na b → a).
+  // Zwraca { prompt, ans – zdanie odpowiedzi, h – pierwsza wskazówka, W – przedmiot }. Liczby się nie zmieniają.
+  MP.wordAS = (r, a, b, op) => {
+    const W = MP.k2noun(r), v = virt(W), sh = (f) => f.replace(/ (w|z|ze|dla|na|do) .*$/, ''), WS = W.map(sh);
+    const t = (n) => n + ' ' + p(n, W[0], W[1], W[2]), ts = (n) => n + ' ' + p(n, WS[0], WS[1], WS[2]), G = WS[2]; // pełna nazwa raz, potem krótka: „4 diamenty w grze… ile diamentów”
+    const [nm, g] = MP.pickKid(r, DEFKIDS), [nm2] = MP.pickKid(r, DEFKIDS, nm);
+    const S = (arr) => { const ok = arr.filter(x => !(v && x.phys) && !(x.virt && !v)); return r.pick(ok); };
+    if (op === 'add') { const s = a + b; const T2 = [
+      { q: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dostał', 'Dostała') + ' jeszcze ' + ts(b) + '. Ile ' + G + ' ma teraz?', ans: nm + ' ma ' + ts(s) + '.', h: 'Czy teraz ma więcej, czy mniej? Więcej – dodajemy.' },
+      { q: 'Rano ' + nm + ' ' + vg(g, 'dostał', 'dostała') + ' od babci ' + t(a) + ', a po południu od dziadka ' + ts(b) + '. Ile ' + G + ' ' + vg(g, 'dostał', 'dostała') + ' razem?', ans: 'razem ' + ts(s) + '.', h: 'Od babci i od dziadka – łączymy, czyli dodajemy.' },
+      { q: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + ts(b) + '. Ile ' + G + ' mają razem?', ans: 'razem mają ' + ts(s) + '.', h: '„Razem” – dodajemy.' },
+      { q: 'W poniedziałek ' + nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + t(a) + ', a we wtorek jeszcze ' + ts(b) + '. Ile ' + G + ' ' + vg(g, 'kupił', 'kupiła') + ' w sumie?', ans: 'w sumie ' + ts(s) + '.', h: 'Zakupy z dwóch dni łączymy – dodajemy.', phys: true },
+      { q: 'W pudełku ' + V2(a, 'było', 'były') + ' ' + t(a) + '. ' + nm + ' ' + vg(g, 'dołożył', 'dołożyła') + ' ' + ts(b) + '. Ile ' + G + ' jest teraz w pudełku?', ans: 'w pudełku jest ' + ts(s) + '.', h: 'Dołożono – jest więcej, więc dodajemy.', phys: true },
+      { q: nm + ' ' + vg(g, 'wygrał', 'wygrała') + ' w konkursie ' + t(b) + '. Wcześniej ' + vg(g, 'miał', 'miała') + ' ' + ts(a) + '. Ile ' + G + ' ma teraz?', ans: nm + ' ma ' + ts(s) + '.', h: 'Doszło więcej – dodajemy. Kolejność liczb w zadaniu nie ma znaczenia.' },
+    ]; const x = S(T2); return { prompt: x.q, ans: x.ans, h: x.h, W }; }
+    if (op === 'sub') { const d = a - b; const T2 = [
+      { q: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dał', 'Dała') + ' ' + r.pick(['koledze', 'koleżance', 'młodszemu bratu', 'siostrze']) + ' ' + ts(b) + '. Ile ' + G + ' ' + vg(g, 'mu', 'jej') + ' zostało?', ans: 'zostało ' + ts(d) + '.', h: 'Zostało więcej czy mniej? Mniej – odejmujemy.' },
+      { q: 'W pudełku ' + V2(a, 'było', 'były') + ' ' + t(a) + '. ' + nm + ' ' + vg(g, 'wyjął', 'wyjęła') + ' ' + ts(b) + '. Ile ' + G + ' zostało w pudełku?', ans: 'w pudełku zostało ' + ts(d) + '.', h: 'Wyjęto część – zostało mniej, więc odejmujemy.', phys: true },
+      { q: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + ts(b) + '. O ile więcej ' + G + ' ma ' + nm + '?', ans: 'o ' + d + ' więcej.', h: '„O ile więcej” – sprawdzamy różnicę, czyli odejmujemy.' },
+      { q: nm + ' chce mieć ' + t(a) + '. Ma już ' + ts(b) + '. Ile ' + G + ' jeszcze ' + vg(g, 'mu', 'jej') + ' brakuje?', ans: 'brakuje ' + ts(d) + '.', h: 'Ile brakuje do ' + a + '? Odejmujemy to, co już jest.' },
+      { q: 'Na urodzinach ' + nm + ' ' + vg(g, 'rozdał', 'rozdała') + ' gościom ' + t(b) + ' ze swoich ' + a + ' ' + G + '. Ile ' + G + ' ' + vg(g, 'mu', 'jej') + ' zostało?', ans: 'zostało ' + ts(d) + '.', h: 'Rozdane ubywa – odejmujemy.', phys: true },
+      { q: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Podarował', 'Podarowała') + ' ' + ts(b) + ' na szkolny kiermasz. Ile ' + G + ' ' + vg(g, 'mu', 'jej') + ' zostało?', ans: 'zostało ' + ts(d) + '.', h: 'Podarowane ubywa – odejmujemy.', phys: true },
+      { q: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + ' i ' + vg(g, 'wydał', 'wydała') + ' ' + ts(b) + ' w sklepie w grze. Ile ' + G + ' ' + vg(g, 'mu', 'jej') + ' zostało?', ans: 'zostało ' + ts(d) + '.', h: 'Wydane ubywa – odejmujemy.', virt: true },
+    ]; const x = S(T2); return { prompt: x.q, ans: x.ans, h: x.h, W }; }
+    if (op === 'mul') { const m = a * b; const T2 = [
+      { q: 'W każdym z ' + a + ' pudełek jest po ' + t(b) + '. Ile ' + G + ' jest we wszystkich pudełkach?', ans: 'razem ' + ts(m) + '.', h: 'Każde pudełko ma tyle samo – to mnożenie.', phys: true },
+      { q: 'Przez ' + a + ' dni ' + nm + ' ' + vg(g, 'odkładał', 'odkładała') + ' codziennie po ' + t(b) + '. Ile ' + G + ' ' + vg(g, 'odłożył', 'odłożyła') + ' razem?', ans: 'razem ' + ts(m) + '.', h: 'Codziennie tyle samo – to mnożenie.' },
+      { q: a + ' dzieci dostało po ' + t(b) + '. Ile ' + G + ' dostały wszystkie dzieci razem?', ans: 'razem ' + ts(m) + '.', h: 'Każde dziecko dostało tyle samo – to mnożenie.' },
+      { q: 'Na ' + a + ' półkach leży po ' + t(b) + '. Ile ' + G + ' leży na wszystkich półkach?', ans: 'razem ' + ts(m) + '.', h: 'Na każdej półce tyle samo – to mnożenie.', phys: true },
+    ]; const x = S(T2); return { prompt: x.q, ans: x.ans, h: x.h, W }; }
+    const tot = a * b; const T2 = [
+      { q: nm + ' ' + vg(g, 'rozdzielił', 'rozdzieliła') + ' ' + t(tot) + ' po równo między ' + b + ' ' + p(b, 'dziecko', 'dzieci', 'dzieci') + '. Ile ' + G + ' dostało każde dziecko?', ans: 'każde dziecko dostało ' + ts(a) + '.', h: 'Dzielimy po równo – to dzielenie.' },
+      { q: nm + ' ' + vg(g, 'pakuje', 'pakuje') + ' ' + t(tot) + ' do woreczków, po ' + b + ' do każdego. Ile woreczków zapełni?', ans: a + ' ' + p(a, 'woreczek', 'woreczki', 'woreczków') + '.', h: 'Ile razy ' + b + ' mieści się w ' + tot + '? To dzielenie.', phys: true },
+      { q: t(tot).replace(/^./, (c) => c.toUpperCase()) + ' trzeba podzielić po równo na ' + b + ' ' + p(b, 'drużynę', 'drużyny', 'drużyn') + '. Ile ' + G + ' dostanie każda drużyna?', ans: 'każda drużyna dostanie ' + ts(a) + '.', h: 'Po równo na drużyny – to dzielenie.' },
+    ]; const x = S(T2); return { prompt: x.q, ans: x.ans, h: x.h, W, tot };
+  };
+  // krótka historyjka do „Oblicz” w kl. 1–3 (z zainteresowań; null = samo działanie). Losowanie na końcu generatora.
   MP.storyAS = (r, a, b, sub) => {
-    const th = MP.curTheme; if (!th || th.id === 'szkola' || !th.k2t || !r.chance(0.4)) return null;
-    MP.themeUsed = true; const W = th.k2t, t = (n) => n + ' ' + p(n, W[0], W[1], W[2]);
-    return ('Masz ' + t(a) + '. ' + (sub ? 'Oddajesz ' + b + '. Ile Ci zostało?' : 'Dostajesz jeszcze ' + b + '. Ile masz teraz?')) + '<br><b>' + a + (sub ? ' − ' : ' + ') + b + ' = ?</b>';
+    const th = MP.curTheme; if (!th || th.id === 'szkola' || !r.chance(0.4)) return null;
+    const x = MP.wordAS(r, a, b, sub ? 'sub' : 'add');
+    return x.prompt + '<br><b>' + a + (sub ? ' − ' : ' + ') + b + ' = ?</b>';
   };
 })(MP);
