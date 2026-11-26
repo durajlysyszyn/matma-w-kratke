@@ -7,7 +7,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
   const N = (n) => F(n, 1);
   const KIDS = [['Ola', 'f'], ['Kuba', 'm'], ['Zosia', 'f'], ['Antek', 'm'], ['Hania', 'f'], ['Staś', 'm'], ['Lena', 'f'], ['Franek', 'm'], ['Maja', 'f'], ['Tymek', 'm']];
   const vg = (g, m, f) => g === 'f' ? f : m;
-  const nouns = () => (MP.th().k2t) || MP.THEMES.szkola.k2t;
+  const nouns = (r) => MP.k2noun(r); // losowy przedmiot z zainteresowań (różne w kolejnych zadaniach)
 
   // ---------- wspólne pomocnicze ----------
   // zadanie wyboru z gotowymi etykietami (tekst, wyrażenia, π, pierwiastki…)
@@ -144,13 +144,15 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią do 20', grade: 1, mainCode: 'op_confuse', prereq: ['k1_add', 'k1_sub'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns(), [nm, g] = r.pick(KIDS), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      const T = nouns(r), [nm, g] = MP.pickKid(r, KIDS), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       const op = d === 1 ? 'add' : d === 2 ? r.pick(['add', 'sub']) : r.pick(['sub', 'cmp']);
       if (op === 'add') { const a = r.int(2, d === 1 ? 7 : 12), b = r.int(2, (d === 1 ? 10 : 20) - a); const s = a + b;
-        return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dostał', 'Dostała') + ' jeszcze ' + t(b) + '. Ile ' + T[2] + ' ma teraz?', value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: ['Czy teraz ma więcej, czy mniej? Więcej – dodajemy.', 'Działanie: ' + a + ' + ' + b + '.', 'Możesz narysować kółka i je policzyć.'], sol: [a + ' + ' + b + ' = ' + s, 'Odpowiedź: ' + nm + ' ma ' + t(s) + '.'] }; }
+        const x = MP.wordAS(r, a, b, 'add');
+        return { prompt: x.prompt, value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' + ' + b + '.', 'Możesz narysować kółka i je policzyć.'], sol: [a + ' + ' + b + ' = ' + s, 'Odpowiedź: ' + x.ans] }; }
       if (op === 'sub') { const a = r.int(8, 20), b = r.int(2, a - 2); const v = a - b;
-        return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Oddał', 'Oddała') + ' ' + t(b) + '. Ile ' + T[2] + ' ' + vg(g, 'mu', 'jej') + ' zostało?', value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: ['Zostało więcej czy mniej? Mniej – odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, 'Odpowiedź: zostało ' + t(v) + '.'] }; }
-      const [nm2] = r.pick(KIDS.filter(k => k[0] !== nm)); const a = r.int(9, 20), b = r.int(2, a - 2);
+        const x = MP.wordAS(r, a, b, 'sub');
+        return { prompt: x.prompt, value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, 'Odpowiedź: ' + x.ans] }; }
+      const [nm2] = MP.pickKid(r, KIDS, nm); const a = r.int(9, 20), b = r.int(2, a - 2);
       return { prompt: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + t(b) + '. O ile więcej ' + T[2] + ' ma ' + nm + '?', value: N(a - b), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(a), code: 'read' }], hints: ['„O ile więcej" – sprawdzamy różnicę, czyli odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Ile trzeba dodać do ' + b + ', żeby było ' + a + '?'], sol: [a + ' − ' + b + ' = ' + (a - b), 'Odpowiedź: o ' + (a - b) + '.'] };
     }
   });
@@ -159,7 +161,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Połowa i ćwiartka', grade: 1, mainCode: 'k1_half', prereq: ['k1_count'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns();
+      const T = nouns(r);
       if (d < 3) { const n = 2 * r.int(d === 1 ? 1 : 3, d === 1 ? 5 : 10);
         return { prompt: 'Podziel ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' na pół, po równo dla dwojga dzieci. Ile dostanie każde dziecko?', visual: frameSvg(n), value: N(n / 2), wrong: [{ v: N(n * 2), code: 'k1_half' }, { v: N(n - 2), code: 'k1_half' }, { v: N(n / 2 + 1), code: 'calc' }],
           hints: ['Połowa to jedna z dwóch równych części.', 'Rozdzielaj po jednym: jeden dla pierwszego dziecka, jeden dla drugiego…', 'Jaka liczba dodana do siebie daje ' + n + '?'], sol: [n / 2 + ' + ' + n / 2 + ' = ' + n, 'Połowa z ' + n + ' to ' + n / 2 + '.'] }; }
@@ -174,10 +176,10 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     gen(r, d) {
       if (d === 1) { const c = Array.from({ length: r.int(2, 4) }, () => r.pick([1, 2, 5])); const s = c.reduce((a, b) => a + b, 0);
         return { visual: MP.moneySvg(c.map(v => ({ v, u: 'zł' }))), prompt: 'W portfelu są monety: ' + c.map(x => x + ' zł').join(', ') + '. Ile to razem złotych?', value: N(s), wrong: [{ v: N(c.length), code: 'read' }, { v: N(s + 1), code: 'calc' }], hints: ['Dodaj wartości monet, a nie liczbę monet.', 'Zacznij od największej monety.', c.join(' + ') + ' = ?'], sol: [c.join(' + ') + ' = ' + s + ' zł'] }; }
-      if (d === 2) { const T = nouns(); const pay = r.pick([10, 20]), price = r.int(2, pay - 1);
+      if (d === 2) { const T = MP.k2noun(r, true); const pay = r.pick([10, 20]), price = r.int(2, pay - 1);
         return { visual: MP.moneySvg([{ v: pay, u: 'zł' }]), prompt: 'Kupujesz ' + T[0] + ' za ' + price + ' zł i płacisz banknotem ' + pay + ' zł. Ile reszty dostaniesz?', value: N(pay - price), wrong: [{ v: N(pay + price), code: 'op_confuse' }, { v: N(price), code: 'read' }], hints: ['Reszta to to, co zostanie z banknotu.', 'Działanie: ' + pay + ' − ' + price + '.', 'Sprawdź: ' + price + ' + reszta = ' + pay + '.'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' zł'] }; }
       const z = r.int(1, 5);
-      return { prompt: 'Ile groszy to ' + z + ' ' + pl(z, 'złoty', 'złote', 'złotych') + '?', value: N(z * 100), wrong: [{ v: N(z * 10), code: 'k2_zlgr' }, { v: N(z), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' razy po 100 groszy.', z > 1 ? Array(z).fill(100).join(' + ') + ' = ?' : 'To dokładnie 100 gr.'], sol: [z + ' zł = ' + z * 100 + ' gr'] };
+      return { visual: MP.moneySvg(Array.from({ length: z }, () => ({ v: 1, u: 'zł' }))), prompt: 'Ile groszy to ' + z + ' ' + pl(z, 'złoty', 'złote', 'złotych') + '?', value: N(z * 100), wrong: [{ v: N(z * 10), code: 'k2_zlgr' }, { v: N(z), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' razy po 100 groszy.', z > 1 ? Array(z).fill(100).join(' + ') + ' = ?' : 'To dokładnie 100 gr.'], sol: [z + ' zł = ' + z * 100 + ' gr'] };
     }
   });
 
@@ -270,7 +272,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const v = sub ? a - b : a + b; const op = sub ? ' − ' : ' + ';
       const H = Math.floor(b / 100) * 100, T = Math.floor(b % 100 / 10) * 10, J = b % 10;
       const steps = []; let cur = a; [[H, 'setki'], [T, 'dziesiątki'], [J, 'jedności']].forEach(([x]) => { if (x) { const nx = sub ? cur - x : cur + x; steps.push(cur + op + x + ' = ' + nx); cur = nx; } });
-      return { prompt: 'Oblicz: ' + a + op + b, value: N(v), wrong: [{ v: N(sub ? a + b : Math.abs(a - b)), code: 'op_confuse' }, { v: N(sub ? v + 10 : v - 10), code: 'calc' }, { v: N(sub ? v - 100 : v + 100), code: 'k3_place' }].filter(w => w.v.n >= 0 && w.v.n !== v),
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, sub) : null;
+      return { prompt: story || 'Oblicz: ' + a + op + b, value: N(v), wrong: [{ v: N(sub ? a + b : Math.abs(a - b)), code: 'op_confuse' }, { v: N(sub ? v + 10 : v - 10), code: 'calc' }, { v: N(sub ? v - 100 : v + 100), code: 'k3_place' }].filter(w => w.v.n >= 0 && w.v.n !== v),
         hints: ['Rozłóż drugą liczbę na setki, dziesiątki i jedności: ' + [H, T, J].filter(Boolean).join(' + ') + '.', sub ? 'Odejmuj po kolei: najpierw setki, potem dziesiątki, na końcu jedności.' : 'Dodawaj po kolei: najpierw setki, potem dziesiątki, na końcu jedności.', steps[0] ? 'Pierwszy krok: ' + steps[0] + '.' : 'Policz.'], sol: steps.length ? steps : [a + op + b + ' = ' + v] };
     }
   });
@@ -291,14 +294,23 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią (jedno- i dwudziałaniowe)', grade: 3, mainCode: 'read', prereq: ['k3_add', 'tabl'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns(), [nm, g] = r.pick(KIDS), [nm2] = r.pick(KIDS.filter(k => k[0] !== nm)), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      const T = nouns(r).slice(), [nm, g] = MP.pickKid(r, KIDS), [nm2] = MP.pickKid(r, KIDS, nm), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       if (d === 1) { const b = r.int(3, 9), k = r.int(2, 6), a = b * k;
         if (r.chance(0.5)) return { prompt: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + t(b) + '. Ile razy więcej ' + T[2] + ' ma ' + nm + '?', value: N(k), wrong: [{ v: N(a - b), code: 'k3_times' }, { v: N(a + b), code: 'op_confuse' }], hints: ['„Ile razy więcej" – dzielimy większą liczbę przez mniejszą.', 'Działanie: ' + a + ' : ' + b + '.', 'Ile razy ' + b + ' mieści się w ' + a + '?'], sol: [a + ' : ' + b + ' = ' + k, 'Odpowiedź: ' + k + ' razy więcej.'] };
         return { prompt: nm + ' ma ' + t(b) + ', a ' + nm2 + ' ma ' + k + ' razy więcej. Ile ' + T[2] + ' ma ' + nm2 + '?', value: N(a), wrong: [{ v: N(b + k), code: 'k3_times' }, { v: N(b), code: 'read' }], hints: ['„' + k + ' razy więcej" – mnożymy.', 'Działanie: ' + b + ' · ' + k + '.', 'Policz z tabliczki mnożenia.'], sol: [b + ' · ' + k + ' = ' + a, 'Odpowiedź: ' + nm2 + ' ma ' + t(a) + '.'] }; }
       if (d === 2) { const n = r.int(3, 8), p = r.int(3, 9), extra = r.int(5, 30);
-        return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' paczek po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ' i jeszcze ' + t(extra) + ' osobno. Ile ' + T[2] + ' ' + vg(g, 'kupił', 'kupiła') + ' razem?', value: N(n * p + extra), wrong: [{ v: N(n + p + extra), code: 'op_confuse' }, { v: N(n * p), code: 'read' }, { v: N(n * (p + extra)), code: 'order_ltr' }], hints: ['Najpierw policz, ile jest w paczkach.', n + ' · ' + p + ' = ' + n * p + '.', 'Dodaj te osobno: ' + n * p + ' + ' + extra + '.'], sol: [n + ' · ' + p + ' = ' + n * p, n * p + ' + ' + extra + ' = ' + (n * p + extra), 'Odpowiedź: razem ' + t(n * p + extra) + '.'] }; }
+        const sh = (f) => f.replace(/ (w|z|ze|dla|na|do) .*$/, ''), G = sh(T[2]), ts = (k) => k + ' ' + pl(k, sh(T[0]), sh(T[1]), G), virt = / w grze$/.test(T[0]);
+        const Q2 = [nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, 'paczkę', 'paczki', 'paczek') + ' po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ' i jeszcze ' + ts(extra) + ' osobno. Ile ' + G + ' ' + vg(g, 'kupił', 'kupiła') + ' razem?',
+          virt ? 'W grze ' + nm + ' ' + vg(g, 'przeszedł', 'przeszła') + ' ' + n + ' ' + pl(n, 'poziom', 'poziomy', 'poziomów') + ' i na każdym ' + vg(g, 'zdobył', 'zdobyła') + ' po ' + p + ' ' + pl(p, sh(T[0]), sh(T[1]), G) + '. Potem ' + vg(g, 'dostał', 'dostała') + ' jeszcze ' + ts(extra) + ' w nagrodę. Ile ' + G + ' ma razem?'
+            : 'W każdym z ' + n + ' pudełek jest po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ', a obok leży jeszcze ' + ts(extra) + '. Ile ' + G + ' jest razem?'];
+        if (!virt) Q2.push('Na ' + n + ' półkach leży po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ', a na stole jeszcze ' + ts(extra) + '. Ile ' + G + ' jest razem?');
+        if (virt) Q2.shift(); // nie „kupujemy” przedmiotów z gier
+        return { prompt: r.pick(Q2), value: N(n * p + extra), wrong: [{ v: N(n + p + extra), code: 'op_confuse' }, { v: N(n * p), code: 'read' }, { v: N(n * (p + extra)), code: 'order_ltr' }], hints: ['Najpierw policz, ile jest w paczkach.', n + ' · ' + p + ' = ' + n * p + '.', 'Dodaj te osobno: ' + n * p + ' + ' + extra + '.'], sol: [n + ' · ' + p + ' = ' + n * p, n * p + ' + ' + extra + ' = ' + (n * p + extra), 'Odpowiedź: razem ' + t(n * p + extra) + '.'] }; }
       const price = r.int(3, 9), n = r.int(2, 6), pay = [20, 50, 100].find(x => x > price * n);
-      return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' po ' + price + ' zł. ' + vg(g, 'Zapłacił', 'Zapłaciła') + ' banknotem ' + pay + ' zł. Ile reszty ' + vg(g, 'dostał', 'dostała') + '?', value: N(pay - n * price), wrong: [{ v: N(pay - n - price), code: 'op_confuse' }, { v: N(n * price), code: 'read' }, { v: N(pay - price), code: 'read' }], hints: ['Najpierw: ile kosztowały wszystkie?', n + ' · ' + price + ' = ' + n * price + ' zł.', 'Reszta: ' + pay + ' − ' + n * price + '.'], sol: [n + ' · ' + price + ' = ' + n * price + ' zł', pay + ' − ' + n * price + ' = ' + (pay - n * price) + ' zł', 'Odpowiedź: ' + (pay - n * price) + ' zł reszty.'] };
+      if (/ w grze$/.test(T[0])) { const T3 = MP.k2noun(r, true); T[0] = T3[0]; T[1] = T3[1]; T[2] = T3[2]; }
+      const Q3 = [nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' po ' + price + ' zł. ' + vg(g, 'Zapłacił', 'Zapłaciła') + ' banknotem ' + pay + ' zł. Ile reszty ' + vg(g, 'dostał', 'dostała') + '?',
+        nm + ' ma w skarbonce ' + pay + ' zł. Kupuje ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' po ' + price + ' zł. Ile złotych ' + vg(g, 'mu', 'jej') + ' zostanie?'];
+      return { prompt: r.pick(Q3), value: N(pay - n * price), wrong: [{ v: N(pay - n - price), code: 'op_confuse' }, { v: N(n * price), code: 'read' }, { v: N(pay - price), code: 'read' }], hints: ['Najpierw: ile kosztowały wszystkie?', n + ' · ' + price + ' = ' + n * price + ' zł.', 'Reszta: ' + pay + ' − ' + n * price + '.'], sol: [n + ' · ' + price + ' = ' + n * price + ' zł', pay + ' − ' + n * price + ' = ' + (pay - n * price) + ' zł', 'Odpowiedź: ' + (pay - n * price) + ' zł reszty.'] };
     }
   });
 
@@ -306,11 +318,11 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Obliczenia pieniężne', grade: 3, mainCode: 'k3_gr', prereq: ['k3_add'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      if (d === 1) { const z = r.int(1, 9), g = r.pick([10, 20, 50, 80, 5]); return { prompt: 'Ile groszy to ' + z + ' zł ' + g + ' gr?', value: N(z * 100 + g), unit: 'gr', wrong: [{ v: N(z * 10 + g), code: 'k3_gr' }, { v: N(z + g), code: 'k3_gr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', z * 100 + ' + ' + g + ' = ?'], sol: [z + ' zł = ' + z * 100 + ' gr', z * 100 + ' + ' + g + ' = ' + (z * 100 + g) + ' gr'] }; }
+      if (d === 1) { const z = r.int(1, 9), g = r.pick([10, 20, 50, 80, 5]); return { visual: MP.moneySvg(MP.moneyList(z, g)), prompt: 'Ile groszy to ' + z + ' zł ' + g + ' gr?', value: N(z * 100 + g), unit: 'gr', wrong: [{ v: N(z * 10 + g), code: 'k3_gr' }, { v: N(z + g), code: 'k3_gr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', z * 100 + ' + ' + g + ' = ?'], sol: [z + ' zł = ' + z * 100 + ' gr', z * 100 + ' + ' + g + ' = ' + (z * 100 + g) + ' gr'] }; }
       if (d === 2) { const a = r.int(1, 4) * 100 + r.pick([50, 60, 70, 80]), b = r.int(1, 3) * 100 + r.pick([40, 50, 60, 70]); const s = a + b; const z = Math.floor(s / 100), g = s % 100;
         return { prompt: 'Lizak kosztuje ' + U.money(a) + ' zł, a sok ' + U.money(b) + ' zł. Ile groszy kosztują razem?', value: N(s), unit: 'gr', wrong: [{ v: N(Math.floor(a / 100) * 100 + Math.floor(b / 100) * 100 + (a % 100 + b % 100) % 100), code: 'k3_gr' }, { v: N(s + 100), code: 'calc' }], hints: ['Zamień ceny na grosze: ' + U.money(a) + ' zł = ' + a + ' gr.', U.money(b) + ' zł = ' + b + ' gr.', a + ' + ' + b + ' = ?'], sol: [a + ' gr + ' + b + ' gr = ' + s + ' gr', s + ' gr = ' + z + ' zł ' + g + ' gr'] }; }
       const price = r.int(2, 8) * 100 + r.pick([20, 40, 50, 70, 90]), pay = [500, 1000, 2000].find(x => x > price);
-      return { prompt: 'Zeszyt kosztuje ' + U.money(price) + ' zł. Płacisz ' + pay / 100 + ' zł. Ile groszy reszty dostaniesz?', value: N(pay - price), unit: 'gr', wrong: [{ v: N(pay / 100 * 100 - Math.floor(price / 100) * 100 - (100 - price % 100)), code: 'calc' }, { v: N(Math.abs(pay - price - 100)), code: 'k3_gr' }, { v: N(price), code: 'read' }].filter(w => w.v.n > 0 && w.v.n !== pay - price), hints: ['Zamień wszystko na grosze.', pay / 100 + ' zł = ' + pay + ' gr, ' + U.money(price) + ' zł = ' + price + ' gr.', pay + ' − ' + price + ' = ?'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' gr', 'To ' + U.money(pay - price) + ' zł.'] };
+      return { visual: MP.moneySvg([{ v: pay / 100, u: 'zł' }]), prompt: 'Zeszyt kosztuje ' + U.money(price) + ' zł. Płacisz ' + pay / 100 + ' zł. Ile groszy reszty dostaniesz?', value: N(pay - price), unit: 'gr', wrong: [{ v: N(pay / 100 * 100 - Math.floor(price / 100) * 100 - (100 - price % 100)), code: 'calc' }, { v: N(Math.abs(pay - price - 100)), code: 'k3_gr' }, { v: N(price), code: 'read' }].filter(w => w.v.n > 0 && w.v.n !== pay - price), hints: ['Zamień wszystko na grosze.', pay / 100 + ' zł = ' + pay + ' gr, ' + U.money(price) + ' zł = ' + price + ' gr.', pay + ' − ' + price + ' = ?'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' gr', 'To ' + U.money(pay - price) + ' zł.'] };
     }
   });
 

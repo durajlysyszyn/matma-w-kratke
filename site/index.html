@@ -400,6 +400,19 @@ details.more summary{cursor:pointer;color:var(--pen);font-size:14px;margin:-4px 
 .nextstep{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:16px 18px;border-radius:16px;background:var(--pen);color:var(--pen-ink);margin-bottom:16px}.nextstep .lbl{font-size:13px;opacity:.85}.nextstep h2{margin:2px 0 0;color:inherit}.nextstep .btn{background:var(--hl);color:#1d1d1d;border-color:transparent}
 .map.big .drow .dn .dnw{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;overflow:visible;white-space:normal;font-size:inherit;color:inherit}.map.big .drow .dn .dzbadge{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap;overflow:visible;text-decoration:none}.map.big .drow .dn .dzbadge.ok{background:var(--ok-soft);color:var(--ok)}.map.big .drow .dn .dzbadge.rd{background:var(--warn-soft);color:var(--warn)}
 .lvlhelp{margin-top:10px}.lvlhelp summary{cursor:pointer;color:var(--pen);font-weight:600}.lvlhelp dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:10px 0}.lvlhelp dt{font-weight:700}.lvlhelp dd{margin:0}
+
+/* minigry */
+.goffer{margin:14px 0;padding:14px;border-radius:var(--r);background:var(--hl-soft);border:1px solid var(--hl)}.goffer p{margin:0 0 6px}
+.game .ghead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.game .ghead b{font-size:20px}
+.ggoal{font-size:20px}.ggoal .gfr,.gitem .gfr{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05;vertical-align:middle}.gfr i{font-style:normal}.gfr i:first-child{border-bottom:2px solid currentColor;padding:0 3px}
+.gbar{display:flex;align-items:center;gap:10px;font-weight:700}.gsc{min-width:36px;font-size:22px;color:var(--ok)}.gtgt{flex:1;color:var(--mute);font-weight:600}.gtime{width:90px;height:10px;border-radius:6px;background:var(--line);overflow:hidden}.gtime i{display:block;height:100%;width:100%;background:var(--pen)}
+.garea{position:relative;height:min(380px,58vh);margin-top:8px;border-radius:var(--r);border:1px solid var(--line);overflow:hidden;touch-action:manipulation;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;user-select:none;-webkit-user-select:none}
+.gitem{position:absolute;top:0;min-width:64px;min-height:52px;padding:6px 12px;border-radius:14px;border:2px solid var(--pen);background:var(--card);color:var(--ink);font:700 22px/1.1 inherit;font-family:inherit;cursor:pointer;will-change:transform;touch-action:manipulation}
+.gitem.gok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}.gitem.gno{background:var(--warn-soft);border-color:var(--warn);opacity:.7}.gitem small{font-size:14px}
+.gwhy{min-height:1.4em;margin:8px 0 0;color:var(--mute)}.gbig{font-size:26px;margin:6px 0}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+@media(pointer:coarse){.btn.sm{min-height:44px}.map.big .cell{width:44px;height:44px}.map.big .sq{gap:6px}}
+.ppl{display:flex;flex-wrap:wrap;gap:6px}.pchip{display:inline-flex;align-items:center;gap:4px;padding:4px 4px 4px 12px;border-radius:999px;background:var(--pen-soft);border:1px solid var(--pen);font-weight:600}.pchip small{color:var(--mute);font-weight:400}.pchip button{min-width:36px;min-height:36px;border:0;background:none;color:inherit;font-size:20px;cursor:pointer;border-radius:50%}
 </style>
 </head>
 <body>
@@ -407,6 +420,7 @@ details.more summary{cursor:pointer;color:var(--pen);font-size:14px;margin:-4px 
   <button class="brand" data-go="start" aria-label="Strona główna"><i><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></i><span>Matma w kratkę</span></button>
   <nav aria-label="Menu główne"></nav>
 </div></header>
+<div id="srlive" class="sr-only" role="status" aria-live="polite"></div>
 <main id="app"><p class="muted">Wczytywanie…</p></main>
 <div id="toast"></div>
 <style>
@@ -724,6 +738,18 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP = (typeof wind
     return '<svg viewBox="0 0 ' + Math.max(60, x) + ' ' + H + '" class="vis money" role="img" aria-label="' + list.map(m => m.v + ' ' + m.u).join(', ') + '" style="max-width:' + Math.min(100, Math.max(30, x / 6)) + '%">' + out + '</svg>';
   }
   MP.moneySvg = moneySvg;
+  // imię do zadania z treścią: czasem osoba wpisana przez dziecko/rodzica (MP.people), inaczej z listy gotowych imion.
+  // Bez wpisanych osób losowanie jest identyczne jak wcześniej (te same zadania z tych samych ziaren).
+  MP.people = [];
+  MP.pickKid = (r, list, exclude) => {
+    const ppl = (MP.people || []).filter(p => p && p.n && p.n !== exclude);
+    if (ppl.length && r.chance(0.6)) { const p = r.pick(ppl); return [p.n, p.g === 'f' ? 'f' : 'm']; }
+    const l = exclude ? list.filter(k => k[0] !== exclude) : list; return r.pick(l);
+  };
+  // rozkład kwoty na najmniejszą liczbę monet (zł: 5, 2, 1; gr: 50, 20, 10, 5, 2, 1) – do rysunku
+  MP.moneyList = (zl, gr) => { const out = []; let z = zl || 0, g = gr || 0;
+    [5, 2, 1].forEach(v => { while (z >= v) { out.push({ v, u: 'zł' }); z -= v; } });
+    [50, 20, 10, 5, 2, 1].forEach(v => { while (g >= v) { out.push({ v, u: 'gr' }); g -= v; } }); return out; };
   MP.util = { rng, gcd, lcm, F, red, add, sub, mul, div, eq, val, isSimplest, fromDec, fracM, fmtF, fmtImp, fmtDec, fmtDecK, fmtNum, plain, parseNum, pl, money };
   MP.items = { check, checkNum, asInput, asChoice, asError, asWhy, build };
 })(MP);
@@ -2561,7 +2587,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const wrong = [{ v: N(s + 1), code: 'calc' }, { v: N(s - 1), code: 'calc' }];
       if (carry) wrong.unshift({ v: N(noCarry(a, b)), code: 'k2_carry' });
       const toTen = 10 - a % 10;
-      return { prompt: 'Oblicz: ' + a + ' + ' + b, value: N(s), wrong,
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, false) : null;
+      return { prompt: story || 'Oblicz: ' + a + ' + ' + b, value: N(s), wrong,
         errorVersion: carry ? { steps: ['Jedności: ' + a % 10 + ' + ' + b % 10 + ' = ' + (a % 10 + b % 10) + ', piszę ' + (a % 10 + b % 10) % 10, 'Dziesiątki: ' + Math.floor(a / 10) + ' + ' + Math.floor(b / 10) + ' = ' + (Math.floor(a / 10) + Math.floor(b / 10)), 'Wynik: ' + noCarry(a, b)], wrongIdx: 1, code: 'k2_carry', why: 'Z jedności zrobiła się jeszcze jedna dziesiątka – trzeba ją dodać do dziesiątek.', intro: 'Kuba liczył i wyszło mu ' + noCarry(a, b) + '. Gdzie się pomylił?' } : null,
         hints: carry ? ['Dopełnij do pełnej dziesiątki.', b < 10 ? a + ' + ' + toTen + ' = ' + (a + toTen) + '. Zostaje jeszcze ' + (b - toTen) + '.' : 'Najpierw dodaj dziesiątki: ' + a + ' + ' + Math.floor(b / 10) * 10 + ' = ' + (a + Math.floor(b / 10) * 10) + '.', b < 10 ? (a + toTen) + ' + ' + (b - toTen) + ' = ?' : 'Teraz dodaj jedności: ' + (a + Math.floor(b / 10) * 10) + ' + ' + b % 10 + '.']
           : ['Dodaj osobno dziesiątki i jedności.', 'Dziesiątki: ' + Math.floor(a / 10) + ' + ' + Math.floor(b / 10) + ', jedności: ' + a % 10 + ' + ' + b % 10 + '.', 'Połącz wynik.'],
@@ -2583,7 +2610,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const wrong = [{ v: N(v + 1), code: 'calc' }, { v: N(a + b), code: 'op_confuse' }];
       if (borrow) wrong.unshift({ v: N(flip), code: 'k2_borrow' }, { v: N(v + 10), code: 'k2_borrow' });
       const down = a % 10;
-      return { prompt: 'Oblicz: ' + a + ' − ' + b, value: N(v), wrong,
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, true) : null;
+      return { prompt: story || 'Oblicz: ' + a + ' − ' + b, value: N(v), wrong,
         errorVersion: borrow ? { steps: ['Jedności: ' + b % 10 + ' − ' + a % 10 + ' = ' + Math.abs(a % 10 - b % 10), 'Dziesiątki: ' + Math.floor(a / 10) + ' − ' + Math.floor(b / 10) + ' = ' + (Math.floor(a / 10) - Math.floor(b / 10)), 'Wynik: ' + flip], wrongIdx: 0, code: 'k2_borrow', why: 'Nie wolno odwracać odejmowania! Z ' + a % 10 + ' nie odejmiesz ' + b % 10 + ' – trzeba „rozmienić" jedną dziesiątkę.', intro: 'Ola liczyła i wyszło jej ' + flip + '. Gdzie się pomyliła?' } : null,
         hints: borrow ? ['Odejmuj „do pełnej dziesiątki".', b < 10 ? a + ' − ' + down + ' = ' + (a - down) + '. Musisz odjąć jeszcze ' + (b - down) + '.' : 'Najpierw odejmij dziesiątki: ' + a + ' − ' + Math.floor(b / 10) * 10 + ' = ' + (a - Math.floor(b / 10) * 10) + '.', b < 10 ? (a - down) + ' − ' + (b - down) + ' = ?' : 'Teraz odejmij jedności: ' + (a - Math.floor(b / 10) * 10) + ' − ' + b % 10 + '.']
           : ['Odejmij osobno dziesiątki i jedności.', 'Dziesiątki: ' + Math.floor(a / 10) + ' − ' + Math.floor(b / 10) + ', jedności: ' + a % 10 + ' − ' + b % 10 + '.', 'Sprawdź dodawaniem: wynik + ' + b + ' powinno dać ' + a + '.'],
@@ -2648,16 +2676,18 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią', grade: 2, mainCode: 'read', prereq: ['k2_add', 'k2_sub'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const th = MP.th(), T = th.k2t || MP.THEMES.szkola.k2t, [nm, g] = r.pick(KIDS);
-      const t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      // liczby losujemy najpierw, potem historyjkę: różne przedmioty z zainteresowań i różne sytuacje (MP.wordAS)
       const op = d === 3 ? r.pick(['mul', 'div']) : r.pick(['add', 'sub']);
-      if (op === 'add') { const a = d === 1 ? r.int(5, 30) : r.int(15, 60), b = d === 1 ? r.int(2, 9) : r.int(11, 35); const s = a + b;
-        return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dostał', 'Dostała') + ' jeszcze ' + t(b) + '. Ile ' + T[2] + ' ma teraz?', value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: ['Czy ' + vg(g, 'ma', 'ma') + ' teraz więcej, czy mniej? Więcej – więc dodajemy.', 'Działanie: ' + a + ' + ' + b + '.', 'Policz ' + a + ' + ' + b + '.'], sol: [a + ' + ' + b + ' = ' + s, 'Odpowiedź: ' + nm + ' ma ' + t(s) + '.'] }; }
-      if (op === 'sub') { const a = d === 1 ? r.int(12, 30) : r.int(35, 90), b = d === 1 ? r.int(2, 9) : r.int(11, a - 10); const v = a - b;
-        return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dał', 'Dała') + ' koledze ' + t(b) + '. Ile ' + T[2] + ' ' + vg(g, 'mu', 'jej') + ' zostało?', value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: ['Czy zostało więcej, czy mniej niż było? Mniej – więc odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, 'Odpowiedź: zostało ' + t(v) + '.'] }; }
+      const Od = (x) => 'Odpowiedź: ' + x.ans;
+      if (op === 'add') { const a = d === 1 ? r.int(5, 30) : r.int(15, 60), b = d === 1 ? r.int(2, 9) : r.int(11, 35); const s = a + b; const x = MP.wordAS(r, a, b, 'add');
+        return { prompt: x.prompt, value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' + ' + b + '.', 'Policz ' + a + ' + ' + b + '.'], sol: [a + ' + ' + b + ' = ' + s, Od(x)] }; }
+      if (op === 'sub') { const a = d === 1 ? r.int(12, 30) : r.int(35, 90), b = d === 1 ? r.int(2, 9) : r.int(11, a - 10); const v = a - b; const x = MP.wordAS(r, a, b, 'sub');
+        return { prompt: x.prompt, value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, Od(x)] }; }
       let a, b; do { a = r.int(2, 9); b = r.int(2, 9); } while (a * b > 50);
-      if (op === 'mul') return { prompt: 'W każdym z ' + a + ' pudełek jest po ' + t(b) + '. Ile ' + T[2] + ' jest we wszystkich pudełkach?', value: N(a * b), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(a * b - b), code: 'calc' }], hints: ['Każde pudełko ma tyle samo – to mnożenie.', 'Działanie: ' + a + ' · ' + b + '.', Array(a).fill(b).join(' + ') + ' = ?'], sol: [a + ' · ' + b + ' = ' + a * b, 'Odpowiedź: razem ' + t(a * b) + '.'] };
-      return { prompt: nm + ' ' + vg(g, 'rozdzielił', 'rozdzieliła') + ' ' + t(a * b) + ' po równo między ' + b + ' ' + pl(b, 'dziecko', 'dzieci', 'dzieci') + '. Ile ' + T[2] + ' dostało każde dziecko?', value: N(a), wrong: [{ v: N(a * b - b), code: 'op_confuse' }, { v: N(a * b + b), code: 'op_confuse' }], hints: ['Dzielimy po równo – to dzielenie.', 'Działanie: ' + a * b + ' : ' + b + '.', 'Jaka liczba razy ' + b + ' daje ' + a * b + '?'], sol: [a * b + ' : ' + b + ' = ' + a, 'Odpowiedź: każde dziecko dostało ' + t(a) + '.'] };
+      if (op === 'mul') { const x = MP.wordAS(r, a, b, 'mul');
+        return { prompt: x.prompt, value: N(a * b), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(a * b - b), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' · ' + b + '.', Array(a).fill(b).join(' + ') + ' = ?'], sol: [a + ' · ' + b + ' = ' + a * b, Od(x)] }; }
+      const x = MP.wordAS(r, a, b, 'div');
+      return { prompt: x.prompt, value: N(a), wrong: [{ v: N(a * b - b), code: 'op_confuse' }, { v: N(a * b + b), code: 'op_confuse' }], hints: [x.h, 'Działanie: ' + a * b + ' : ' + b + '.', 'Jaka liczba razy ' + b + ' daje ' + a * b + '?'], sol: [a * b + ' : ' + b + ' = ' + a, Od(x)] };
     }
   });
 
@@ -2668,10 +2698,10 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     gen(r, d) {
       if (d === 1) { const coins = Array.from({ length: r.int(3, 4) }, () => r.pick([1, 2, 5])); const s = coins.reduce((a, b) => a + b, 0);
         return { visual: MP.moneySvg(coins.map(v => ({ v, u: 'zł' }))), prompt: 'W skarbonce są monety: ' + coins.map(c => c + ' zł').join(', ') + '. Ile to razem złotych?', value: N(s), wrong: [{ v: N(coins.length), code: 'read' }, { v: N(s - 1), code: 'calc' }], hints: ['Dodaj wartości wszystkich monet.', 'Zacznij od największych.', coins.join(' + ') + ' = ?'], sol: [coins.join(' + ') + ' = ' + s + ' zł'] }; }
-      if (d === 2) { const T = (MP.th().k2t) || MP.THEMES.szkola.k2t; const pay = r.pick([10, 20, 50]), price = r.int(2, pay - 2);
+      if (d === 2) { const T = MP.k2noun(r, true); const pay = r.pick([10, 20, 50]), price = r.int(2, pay - 2);
         return { visual: MP.moneySvg([{ v: pay, u: 'zł' }]), prompt: 'Kupujesz ' + T[0] + ' za ' + price + ' zł. Płacisz banknotem ' + pay + ' zł. Ile dostaniesz reszty?', value: N(pay - price), wrong: [{ v: N(pay + price), code: 'op_confuse' }, { v: N(price), code: 'read' }], hints: ['Reszta to to, co zostaje z banknotu po zapłaceniu.', 'Działanie: ' + pay + ' − ' + price + '.', 'Sprawdź: ' + price + ' + reszta = ' + pay + '.'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' zł'] }; }
       const z = r.int(1, 5), g = r.pick([0, 20, 50, 70, 10]);
-      return { prompt: z + ' zł ' + (g ? g + ' gr ' : '') + '= □ gr', fill: true, value: N(z * 100 + g), wrong: [{ v: N(z * 10 + g), code: 'k2_zlgr' }, { v: N(z + g), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', g ? 'Dodaj jeszcze ' + g + ' gr.' : 'To już wszystko.'], sol: [z + ' zł = ' + z * 100 + ' gr', (g ? z * 100 + ' + ' + g + ' = ' : '') + (z * 100 + g) + ' gr'] };
+      return { visual: MP.moneySvg(Array.from({ length: z }, () => ({ v: 1, u: 'zł' })).concat(MP.moneyList(0, g))), prompt: z + ' zł ' + (g ? g + ' gr ' : '') + '= □ gr', fill: true, value: N(z * 100 + g), wrong: [{ v: N(z * 10 + g), code: 'k2_zlgr' }, { v: N(z + g), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', g ? 'Dodaj jeszcze ' + g + ' gr.' : 'To już wszystko.'], sol: [z + ' zł = ' + z * 100 + ' gr', (g ? z * 100 + ' + ' + g + ' = ' : '') + (z * 100 + g) + ' gr'] };
     }
   });
 
@@ -2784,7 +2814,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
   const N = (n) => F(n, 1);
   const KIDS = [['Ola', 'f'], ['Kuba', 'm'], ['Zosia', 'f'], ['Antek', 'm'], ['Hania', 'f'], ['Staś', 'm'], ['Lena', 'f'], ['Franek', 'm'], ['Maja', 'f'], ['Tymek', 'm']];
   const vg = (g, m, f) => g === 'f' ? f : m;
-  const nouns = () => (MP.th().k2t) || MP.THEMES.szkola.k2t;
+  const nouns = (r) => MP.k2noun(r); // losowy przedmiot z zainteresowań (różne w kolejnych zadaniach)
 
   // ---------- wspólne pomocnicze ----------
   // zadanie wyboru z gotowymi etykietami (tekst, wyrażenia, π, pierwiastki…)
@@ -2921,13 +2951,15 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią do 20', grade: 1, mainCode: 'op_confuse', prereq: ['k1_add', 'k1_sub'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns(), [nm, g] = r.pick(KIDS), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      const T = nouns(r), [nm, g] = MP.pickKid(r, KIDS), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       const op = d === 1 ? 'add' : d === 2 ? r.pick(['add', 'sub']) : r.pick(['sub', 'cmp']);
       if (op === 'add') { const a = r.int(2, d === 1 ? 7 : 12), b = r.int(2, (d === 1 ? 10 : 20) - a); const s = a + b;
-        return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dostał', 'Dostała') + ' jeszcze ' + t(b) + '. Ile ' + T[2] + ' ma teraz?', value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: ['Czy teraz ma więcej, czy mniej? Więcej – dodajemy.', 'Działanie: ' + a + ' + ' + b + '.', 'Możesz narysować kółka i je policzyć.'], sol: [a + ' + ' + b + ' = ' + s, 'Odpowiedź: ' + nm + ' ma ' + t(s) + '.'] }; }
+        const x = MP.wordAS(r, a, b, 'add');
+        return { prompt: x.prompt, value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' + ' + b + '.', 'Możesz narysować kółka i je policzyć.'], sol: [a + ' + ' + b + ' = ' + s, 'Odpowiedź: ' + x.ans] }; }
       if (op === 'sub') { const a = r.int(8, 20), b = r.int(2, a - 2); const v = a - b;
-        return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Oddał', 'Oddała') + ' ' + t(b) + '. Ile ' + T[2] + ' ' + vg(g, 'mu', 'jej') + ' zostało?', value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: ['Zostało więcej czy mniej? Mniej – odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, 'Odpowiedź: zostało ' + t(v) + '.'] }; }
-      const [nm2] = r.pick(KIDS.filter(k => k[0] !== nm)); const a = r.int(9, 20), b = r.int(2, a - 2);
+        const x = MP.wordAS(r, a, b, 'sub');
+        return { prompt: x.prompt, value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, 'Odpowiedź: ' + x.ans] }; }
+      const [nm2] = MP.pickKid(r, KIDS, nm); const a = r.int(9, 20), b = r.int(2, a - 2);
       return { prompt: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + t(b) + '. O ile więcej ' + T[2] + ' ma ' + nm + '?', value: N(a - b), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(a), code: 'read' }], hints: ['„O ile więcej" – sprawdzamy różnicę, czyli odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Ile trzeba dodać do ' + b + ', żeby było ' + a + '?'], sol: [a + ' − ' + b + ' = ' + (a - b), 'Odpowiedź: o ' + (a - b) + '.'] };
     }
   });
@@ -2936,7 +2968,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Połowa i ćwiartka', grade: 1, mainCode: 'k1_half', prereq: ['k1_count'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns();
+      const T = nouns(r);
       if (d < 3) { const n = 2 * r.int(d === 1 ? 1 : 3, d === 1 ? 5 : 10);
         return { prompt: 'Podziel ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' na pół, po równo dla dwojga dzieci. Ile dostanie każde dziecko?', visual: frameSvg(n), value: N(n / 2), wrong: [{ v: N(n * 2), code: 'k1_half' }, { v: N(n - 2), code: 'k1_half' }, { v: N(n / 2 + 1), code: 'calc' }],
           hints: ['Połowa to jedna z dwóch równych części.', 'Rozdzielaj po jednym: jeden dla pierwszego dziecka, jeden dla drugiego…', 'Jaka liczba dodana do siebie daje ' + n + '?'], sol: [n / 2 + ' + ' + n / 2 + ' = ' + n, 'Połowa z ' + n + ' to ' + n / 2 + '.'] }; }
@@ -2951,10 +2983,10 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     gen(r, d) {
       if (d === 1) { const c = Array.from({ length: r.int(2, 4) }, () => r.pick([1, 2, 5])); const s = c.reduce((a, b) => a + b, 0);
         return { visual: MP.moneySvg(c.map(v => ({ v, u: 'zł' }))), prompt: 'W portfelu są monety: ' + c.map(x => x + ' zł').join(', ') + '. Ile to razem złotych?', value: N(s), wrong: [{ v: N(c.length), code: 'read' }, { v: N(s + 1), code: 'calc' }], hints: ['Dodaj wartości monet, a nie liczbę monet.', 'Zacznij od największej monety.', c.join(' + ') + ' = ?'], sol: [c.join(' + ') + ' = ' + s + ' zł'] }; }
-      if (d === 2) { const T = nouns(); const pay = r.pick([10, 20]), price = r.int(2, pay - 1);
+      if (d === 2) { const T = MP.k2noun(r, true); const pay = r.pick([10, 20]), price = r.int(2, pay - 1);
         return { visual: MP.moneySvg([{ v: pay, u: 'zł' }]), prompt: 'Kupujesz ' + T[0] + ' za ' + price + ' zł i płacisz banknotem ' + pay + ' zł. Ile reszty dostaniesz?', value: N(pay - price), wrong: [{ v: N(pay + price), code: 'op_confuse' }, { v: N(price), code: 'read' }], hints: ['Reszta to to, co zostanie z banknotu.', 'Działanie: ' + pay + ' − ' + price + '.', 'Sprawdź: ' + price + ' + reszta = ' + pay + '.'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' zł'] }; }
       const z = r.int(1, 5);
-      return { prompt: 'Ile groszy to ' + z + ' ' + pl(z, 'złoty', 'złote', 'złotych') + '?', value: N(z * 100), wrong: [{ v: N(z * 10), code: 'k2_zlgr' }, { v: N(z), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' razy po 100 groszy.', z > 1 ? Array(z).fill(100).join(' + ') + ' = ?' : 'To dokładnie 100 gr.'], sol: [z + ' zł = ' + z * 100 + ' gr'] };
+      return { visual: MP.moneySvg(Array.from({ length: z }, () => ({ v: 1, u: 'zł' }))), prompt: 'Ile groszy to ' + z + ' ' + pl(z, 'złoty', 'złote', 'złotych') + '?', value: N(z * 100), wrong: [{ v: N(z * 10), code: 'k2_zlgr' }, { v: N(z), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' razy po 100 groszy.', z > 1 ? Array(z).fill(100).join(' + ') + ' = ?' : 'To dokładnie 100 gr.'], sol: [z + ' zł = ' + z * 100 + ' gr'] };
     }
   });
 
@@ -3047,7 +3079,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const v = sub ? a - b : a + b; const op = sub ? ' − ' : ' + ';
       const H = Math.floor(b / 100) * 100, T = Math.floor(b % 100 / 10) * 10, J = b % 10;
       const steps = []; let cur = a; [[H, 'setki'], [T, 'dziesiątki'], [J, 'jedności']].forEach(([x]) => { if (x) { const nx = sub ? cur - x : cur + x; steps.push(cur + op + x + ' = ' + nx); cur = nx; } });
-      return { prompt: 'Oblicz: ' + a + op + b, value: N(v), wrong: [{ v: N(sub ? a + b : Math.abs(a - b)), code: 'op_confuse' }, { v: N(sub ? v + 10 : v - 10), code: 'calc' }, { v: N(sub ? v - 100 : v + 100), code: 'k3_place' }].filter(w => w.v.n >= 0 && w.v.n !== v),
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, sub) : null;
+      return { prompt: story || 'Oblicz: ' + a + op + b, value: N(v), wrong: [{ v: N(sub ? a + b : Math.abs(a - b)), code: 'op_confuse' }, { v: N(sub ? v + 10 : v - 10), code: 'calc' }, { v: N(sub ? v - 100 : v + 100), code: 'k3_place' }].filter(w => w.v.n >= 0 && w.v.n !== v),
         hints: ['Rozłóż drugą liczbę na setki, dziesiątki i jedności: ' + [H, T, J].filter(Boolean).join(' + ') + '.', sub ? 'Odejmuj po kolei: najpierw setki, potem dziesiątki, na końcu jedności.' : 'Dodawaj po kolei: najpierw setki, potem dziesiątki, na końcu jedności.', steps[0] ? 'Pierwszy krok: ' + steps[0] + '.' : 'Policz.'], sol: steps.length ? steps : [a + op + b + ' = ' + v] };
     }
   });
@@ -3068,14 +3101,23 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią (jedno- i dwudziałaniowe)', grade: 3, mainCode: 'read', prereq: ['k3_add', 'tabl'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns(), [nm, g] = r.pick(KIDS), [nm2] = r.pick(KIDS.filter(k => k[0] !== nm)), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      const T = nouns(r).slice(), [nm, g] = MP.pickKid(r, KIDS), [nm2] = MP.pickKid(r, KIDS, nm), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       if (d === 1) { const b = r.int(3, 9), k = r.int(2, 6), a = b * k;
         if (r.chance(0.5)) return { prompt: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + t(b) + '. Ile razy więcej ' + T[2] + ' ma ' + nm + '?', value: N(k), wrong: [{ v: N(a - b), code: 'k3_times' }, { v: N(a + b), code: 'op_confuse' }], hints: ['„Ile razy więcej" – dzielimy większą liczbę przez mniejszą.', 'Działanie: ' + a + ' : ' + b + '.', 'Ile razy ' + b + ' mieści się w ' + a + '?'], sol: [a + ' : ' + b + ' = ' + k, 'Odpowiedź: ' + k + ' razy więcej.'] };
         return { prompt: nm + ' ma ' + t(b) + ', a ' + nm2 + ' ma ' + k + ' razy więcej. Ile ' + T[2] + ' ma ' + nm2 + '?', value: N(a), wrong: [{ v: N(b + k), code: 'k3_times' }, { v: N(b), code: 'read' }], hints: ['„' + k + ' razy więcej" – mnożymy.', 'Działanie: ' + b + ' · ' + k + '.', 'Policz z tabliczki mnożenia.'], sol: [b + ' · ' + k + ' = ' + a, 'Odpowiedź: ' + nm2 + ' ma ' + t(a) + '.'] }; }
       if (d === 2) { const n = r.int(3, 8), p = r.int(3, 9), extra = r.int(5, 30);
-        return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' paczek po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ' i jeszcze ' + t(extra) + ' osobno. Ile ' + T[2] + ' ' + vg(g, 'kupił', 'kupiła') + ' razem?', value: N(n * p + extra), wrong: [{ v: N(n + p + extra), code: 'op_confuse' }, { v: N(n * p), code: 'read' }, { v: N(n * (p + extra)), code: 'order_ltr' }], hints: ['Najpierw policz, ile jest w paczkach.', n + ' · ' + p + ' = ' + n * p + '.', 'Dodaj te osobno: ' + n * p + ' + ' + extra + '.'], sol: [n + ' · ' + p + ' = ' + n * p, n * p + ' + ' + extra + ' = ' + (n * p + extra), 'Odpowiedź: razem ' + t(n * p + extra) + '.'] }; }
+        const sh = (f) => f.replace(/ (w|z|ze|dla|na|do) .*$/, ''), G = sh(T[2]), ts = (k) => k + ' ' + pl(k, sh(T[0]), sh(T[1]), G), virt = / w grze$/.test(T[0]);
+        const Q2 = [nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, 'paczkę', 'paczki', 'paczek') + ' po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ' i jeszcze ' + ts(extra) + ' osobno. Ile ' + G + ' ' + vg(g, 'kupił', 'kupiła') + ' razem?',
+          virt ? 'W grze ' + nm + ' ' + vg(g, 'przeszedł', 'przeszła') + ' ' + n + ' ' + pl(n, 'poziom', 'poziomy', 'poziomów') + ' i na każdym ' + vg(g, 'zdobył', 'zdobyła') + ' po ' + p + ' ' + pl(p, sh(T[0]), sh(T[1]), G) + '. Potem ' + vg(g, 'dostał', 'dostała') + ' jeszcze ' + ts(extra) + ' w nagrodę. Ile ' + G + ' ma razem?'
+            : 'W każdym z ' + n + ' pudełek jest po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ', a obok leży jeszcze ' + ts(extra) + '. Ile ' + G + ' jest razem?'];
+        if (!virt) Q2.push('Na ' + n + ' półkach leży po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ', a na stole jeszcze ' + ts(extra) + '. Ile ' + G + ' jest razem?');
+        if (virt) Q2.shift(); // nie „kupujemy” przedmiotów z gier
+        return { prompt: r.pick(Q2), value: N(n * p + extra), wrong: [{ v: N(n + p + extra), code: 'op_confuse' }, { v: N(n * p), code: 'read' }, { v: N(n * (p + extra)), code: 'order_ltr' }], hints: ['Najpierw policz, ile jest w paczkach.', n + ' · ' + p + ' = ' + n * p + '.', 'Dodaj te osobno: ' + n * p + ' + ' + extra + '.'], sol: [n + ' · ' + p + ' = ' + n * p, n * p + ' + ' + extra + ' = ' + (n * p + extra), 'Odpowiedź: razem ' + t(n * p + extra) + '.'] }; }
       const price = r.int(3, 9), n = r.int(2, 6), pay = [20, 50, 100].find(x => x > price * n);
-      return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' po ' + price + ' zł. ' + vg(g, 'Zapłacił', 'Zapłaciła') + ' banknotem ' + pay + ' zł. Ile reszty ' + vg(g, 'dostał', 'dostała') + '?', value: N(pay - n * price), wrong: [{ v: N(pay - n - price), code: 'op_confuse' }, { v: N(n * price), code: 'read' }, { v: N(pay - price), code: 'read' }], hints: ['Najpierw: ile kosztowały wszystkie?', n + ' · ' + price + ' = ' + n * price + ' zł.', 'Reszta: ' + pay + ' − ' + n * price + '.'], sol: [n + ' · ' + price + ' = ' + n * price + ' zł', pay + ' − ' + n * price + ' = ' + (pay - n * price) + ' zł', 'Odpowiedź: ' + (pay - n * price) + ' zł reszty.'] };
+      if (/ w grze$/.test(T[0])) { const T3 = MP.k2noun(r, true); T[0] = T3[0]; T[1] = T3[1]; T[2] = T3[2]; }
+      const Q3 = [nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' po ' + price + ' zł. ' + vg(g, 'Zapłacił', 'Zapłaciła') + ' banknotem ' + pay + ' zł. Ile reszty ' + vg(g, 'dostał', 'dostała') + '?',
+        nm + ' ma w skarbonce ' + pay + ' zł. Kupuje ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' po ' + price + ' zł. Ile złotych ' + vg(g, 'mu', 'jej') + ' zostanie?'];
+      return { prompt: r.pick(Q3), value: N(pay - n * price), wrong: [{ v: N(pay - n - price), code: 'op_confuse' }, { v: N(n * price), code: 'read' }, { v: N(pay - price), code: 'read' }], hints: ['Najpierw: ile kosztowały wszystkie?', n + ' · ' + price + ' = ' + n * price + ' zł.', 'Reszta: ' + pay + ' − ' + n * price + '.'], sol: [n + ' · ' + price + ' = ' + n * price + ' zł', pay + ' − ' + n * price + ' = ' + (pay - n * price) + ' zł', 'Odpowiedź: ' + (pay - n * price) + ' zł reszty.'] };
     }
   });
 
@@ -3083,11 +3125,11 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Obliczenia pieniężne', grade: 3, mainCode: 'k3_gr', prereq: ['k3_add'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      if (d === 1) { const z = r.int(1, 9), g = r.pick([10, 20, 50, 80, 5]); return { prompt: 'Ile groszy to ' + z + ' zł ' + g + ' gr?', value: N(z * 100 + g), unit: 'gr', wrong: [{ v: N(z * 10 + g), code: 'k3_gr' }, { v: N(z + g), code: 'k3_gr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', z * 100 + ' + ' + g + ' = ?'], sol: [z + ' zł = ' + z * 100 + ' gr', z * 100 + ' + ' + g + ' = ' + (z * 100 + g) + ' gr'] }; }
+      if (d === 1) { const z = r.int(1, 9), g = r.pick([10, 20, 50, 80, 5]); return { visual: MP.moneySvg(MP.moneyList(z, g)), prompt: 'Ile groszy to ' + z + ' zł ' + g + ' gr?', value: N(z * 100 + g), unit: 'gr', wrong: [{ v: N(z * 10 + g), code: 'k3_gr' }, { v: N(z + g), code: 'k3_gr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', z * 100 + ' + ' + g + ' = ?'], sol: [z + ' zł = ' + z * 100 + ' gr', z * 100 + ' + ' + g + ' = ' + (z * 100 + g) + ' gr'] }; }
       if (d === 2) { const a = r.int(1, 4) * 100 + r.pick([50, 60, 70, 80]), b = r.int(1, 3) * 100 + r.pick([40, 50, 60, 70]); const s = a + b; const z = Math.floor(s / 100), g = s % 100;
         return { prompt: 'Lizak kosztuje ' + U.money(a) + ' zł, a sok ' + U.money(b) + ' zł. Ile groszy kosztują razem?', value: N(s), unit: 'gr', wrong: [{ v: N(Math.floor(a / 100) * 100 + Math.floor(b / 100) * 100 + (a % 100 + b % 100) % 100), code: 'k3_gr' }, { v: N(s + 100), code: 'calc' }], hints: ['Zamień ceny na grosze: ' + U.money(a) + ' zł = ' + a + ' gr.', U.money(b) + ' zł = ' + b + ' gr.', a + ' + ' + b + ' = ?'], sol: [a + ' gr + ' + b + ' gr = ' + s + ' gr', s + ' gr = ' + z + ' zł ' + g + ' gr'] }; }
       const price = r.int(2, 8) * 100 + r.pick([20, 40, 50, 70, 90]), pay = [500, 1000, 2000].find(x => x > price);
-      return { prompt: 'Zeszyt kosztuje ' + U.money(price) + ' zł. Płacisz ' + pay / 100 + ' zł. Ile groszy reszty dostaniesz?', value: N(pay - price), unit: 'gr', wrong: [{ v: N(pay / 100 * 100 - Math.floor(price / 100) * 100 - (100 - price % 100)), code: 'calc' }, { v: N(Math.abs(pay - price - 100)), code: 'k3_gr' }, { v: N(price), code: 'read' }].filter(w => w.v.n > 0 && w.v.n !== pay - price), hints: ['Zamień wszystko na grosze.', pay / 100 + ' zł = ' + pay + ' gr, ' + U.money(price) + ' zł = ' + price + ' gr.', pay + ' − ' + price + ' = ?'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' gr', 'To ' + U.money(pay - price) + ' zł.'] };
+      return { visual: MP.moneySvg([{ v: pay / 100, u: 'zł' }]), prompt: 'Zeszyt kosztuje ' + U.money(price) + ' zł. Płacisz ' + pay / 100 + ' zł. Ile groszy reszty dostaniesz?', value: N(pay - price), unit: 'gr', wrong: [{ v: N(pay / 100 * 100 - Math.floor(price / 100) * 100 - (100 - price % 100)), code: 'calc' }, { v: N(Math.abs(pay - price - 100)), code: 'k3_gr' }, { v: N(price), code: 'read' }].filter(w => w.v.n > 0 && w.v.n !== pay - price), hints: ['Zamień wszystko na grosze.', pay / 100 + ' zł = ' + pay + ' gr, ' + U.money(price) + ' zł = ' + price + ' gr.', pay + ' − ' + price + ' = ?'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' gr', 'To ' + U.money(pay - price) + ' zł.'] };
     }
   });
 
@@ -4187,7 +4229,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
   });
   // zadanie tekstowe: wybór danych potrzebnych do rozwiązania (transfer)
   add('fr_add_diff', 'multisel', [3], (r) => {
-    const [a, b, c, dd] = pickPair(r, 2); const T = MP.th(); const nm = r.pick(['Ola', 'Kuba', 'Zosia', 'Antek']);
+    const [a, b, c, dd] = pickPair(r, 2); const T = MP.th(); const nm = MP.pickKid(r, [['Ola', 'f'], ['Kuba', 'm'], ['Zosia', 'f'], ['Antek', 'm']])[0];
     const opts = ['rano: ' + fr(a, b) + ' h', 'po południu: ' + fr(c, dd) + ' h', 'cena biletu: ' + r.int(8, 25) + ' zł', 'liczba osób: ' + r.int(3, 9)];
     return { type: 'multisel', aspect: 'transfer', prompt: nm + ' w sobotę ćwiczy dwa razy: rano ' + fr(a, b) + ' godziny, a po południu ' + fr(c, dd) + ' godziny. Na basen jedzie z kolegami (' + opts[3].split(': ')[1] + ' osób), bilet kosztuje ' + opts[2].split(': ')[1] + '. <b>Ile godzin ćwiczy razem w sobotę?</b> Zaznacz tylko dane potrzebne do odpowiedzi na to pytanie.', opts, answer: { kind: 'multisel', set: [0, 1] }, extraCode: 'read', missCode: 'read', selHint: 'Zaznacz dane potrzebne do obliczenia odpowiedzi (dotknij, żeby zaznaczyć lub odznaczyć).',
       hints: ['O co pyta zadanie? O łączny czas ćwiczeń.', 'Cena biletu i liczba osób nie mówią nic o czasie.', 'Potrzebne są oba czasy: rano i po południu – potem je dodasz.'], sol: ['Potrzebne: ' + fr(a, b) + ' h i ' + fr(c, dd) + ' h', 'Razem: ' + fr(a, b) + ' + ' + fr(c, dd) + ' = ' + fs(U.add(F(a, b), F(c, dd))) + ' h'] };
@@ -4697,6 +4739,90 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
   MP.interests = [];             // ustawiane przez UI z profilu ucznia
   MP.curTheme = T.szkola;        // motyw bieżącego zadania (ustawiany przez buildItem)
   MP.th = () => { MP.themeUsed = true; return MP.curTheme || T.szkola; };
+  // ---------- zadania z treścią kl. 1–3: wiele przedmiotów na każde zainteresowanie i różne historyjki ----------
+  // formy: [biernik l.poj. (1), l.mn. (2–4), dopełniacz l.mn. (5+)]; „w grze” = przedmiot wirtualny (bez pudełek i stołów)
+  const N3 = (s) => s.split('|').map(x => x.split('/'));
+  const K2N = {
+    szkola: N3('naklejkę/naklejki/naklejek|kredkę/kredki/kredek|zeszyt/zeszyty/zeszytów|gumkę/gumki/gumek|ołówek/ołówki/ołówków'),
+    kosmos: N3('naklejkę z rakietą/naklejki z rakietami/naklejek z rakietami|kartę z planetą/karty z planetami/kart z planetami|świecącą gwiazdkę/świecące gwiazdki/świecących gwiazdek|naszywkę misji/naszywki misji/naszywek misji|model rakiety/modele rakiet/modeli rakiet'),
+    ryby: N3('robaka na przynętę/robaki na przynętę/robaków na przynętę|haczyk/haczyki/haczyków|spławik/spławiki/spławików|błystkę/błystki/błystek|ciężarek/ciężarki/ciężarków'),
+    tornada: N3('zdjęcie burzy/zdjęcia burzy/zdjęć burzy|naklejkę z piorunem/naklejki z piorunami/naklejek z piorunami|kartę z chmurą/karty z chmurami/kart z chmurami|rysunek tornada/rysunki tornad/rysunków tornad|wiatraczek/wiatraczki/wiatraczków'),
+    pilka: N3('karteczkę z piłkarzem/karteczki z piłkarzami/karteczek z piłkarzami|piłkę/piłki/piłek|koszulkę/koszulki/koszulek|szalik kibica/szaliki kibica/szalików kibica|bilet na mecz/bilety na mecz/biletów na mecz'),
+    samoloty: N3('papierowy samolot/papierowe samoloty/papierowych samolotów|model samolotu/modele samolotów/modeli samolotów|naklejkę z samolotem/naklejki z samolotami/naklejek z samolotami|zdjęcie samolotu/zdjęcia samolotów/zdjęć samolotów|bilet lotniczy/bilety lotnicze/biletów lotniczych'),
+    gry: N3('monetę w grze/monety w grze/monet w grze|diament w grze/diamenty w grze/diamentów w grze|skrzynkę ze skarbem w grze/skrzynki ze skarbem w grze/skrzynek ze skarbem w grze|kartę z bohaterem/karty z bohaterami/kart z bohaterami|figurkę z gry/figurki z gry/figurek z gry'),
+    zwierzeta: N3('chrupkę dla psa/chrupki dla psa/chrupek dla psa|smakołyk dla kota/smakołyki dla kota/smakołyków dla kota|marchewkę dla królika/marchewki dla królika/marchewek dla królika|ziarenko dla chomika/ziarenka dla chomika/ziarenek dla chomika|naklejkę ze zwierzątkiem/naklejki ze zwierzątkami/naklejek ze zwierzątkami'),
+    dinozaury: N3('figurkę dinozaura/figurki dinozaurów/figurek dinozaurów|skamielinę/skamieliny/skamielin|kartę z dinozaurem/karty z dinozaurami/kart z dinozaurami|jajo dinozaura/jaja dinozaurów/jaj dinozaurów|naklejkę z T-Reksem/naklejki z T-Reksem/naklejek z T-Reksem'),
+    muzyka: N3('kostkę do gitary/kostki do gitary/kostek do gitary|płytę/płyty/płyt|strunę/struny/strun|bilet na koncert/bilety na koncert/biletów na koncert|naklejkę z nutką/naklejki z nutkami/naklejek z nutkami'),
+    gotowanie: N3('ciasteczko/ciasteczka/ciasteczek|babeczkę/babeczki/babeczek|truskawkę/truskawki/truskawek|jajko/jajka/jajek|naleśnik/naleśniki/naleśników'),
+    rower: N3('odblask/odblaski/odblasków|naklejkę na rower/naklejki na rower/naklejek na rower|dzwonek rowerowy/dzwonki rowerowe/dzwonków rowerowych|dętkę/dętki/dętek|kółko do hulajnogi/kółka do hulajnogi/kółek do hulajnogi'),
+    wyscigi: N3('resoraka/resoraki/resoraków|oponę/opony/opon|puchar/puchary/pucharów|flagę w szachownicę/flagi w szachownicę/flag w szachownicę|bilet na wyścig/bilety na wyścig/biletów na wyścig'),
+    klocki: N3('klocek/klocki/klocków|ludzika z klocków/ludziki z klocków/ludzików z klocków|płytkę konstrukcyjną/płytki konstrukcyjne/płytek konstrukcyjnych|okienko z klocków/okienka z klocków/okienek z klocków|kółko z klocków/kółka z klocków/kółek z klocków'),
+    oceany: N3('muszelkę/muszelki/muszelek|rozgwiazdę z plastiku/rozgwiazdy z plastiku/rozgwiazd z plastiku|perłę/perły/pereł|kamyk z plaży/kamyki z plaży/kamyków z plaży|naklejkę z rybką/naklejki z rybkami/naklejek z rybkami'),
+    gory: N3('kamyk/kamyki/kamyków|szyszkę/szyszki/szyszek|karabińczyk/karabińczyki/karabińczyków|odznakę turystyczną/odznaki turystyczne/odznak turystycznych|pocztówkę z gór/pocztówki z gór/pocztówek z gór'),
+    kosz: N3('piłkę do kosza/piłki do kosza/piłek do kosza|kartę z koszykarzem/karty z koszykarzami/kart z koszykarzami|opaskę na rękę/opaski na rękę/opasek na rękę|bilet na mecz/bilety na mecz/biletów na mecz|koszulkę drużyny/koszulki drużyny/koszulek drużyny'),
+    rysowanie: N3('kredkę/kredki/kredek|flamaster/flamastry/flamastrów|kartkę/kartki/kartek|komiks/komiksy/komiksów|pędzelek/pędzelki/pędzelków'),
+    konie: N3('marchewkę dla konia/marchewki dla konia/marchewek dla konia|kostkę cukru/kostki cukru/kostek cukru|podkowę/podkowy/podków|rozetę z zawodów/rozety z zawodów/rozet z zawodów|jabłko dla konia/jabłka dla konia/jabłek dla konia'),
+    taniec: N3('cekin/cekiny/cekinów|wstążkę/wstążki/wstążek|spinkę do włosów/spinki do włosów/spinek do włosów|medal/medale/medali|bilet na pokaz/bilety na pokaz/biletów na pokaz'),
+    moda: N3('guzik/guziki/guzików|łatkę/łatki/łatek|szpulkę nici/szpulki nici/szpulek nici|wieszak/wieszaki/wieszaków|kawałek materiału/kawałki materiału/kawałków materiału'),
+    lyzwy: N3('naklejkę z łyżwą/naklejki z łyżwami/naklejek z łyżwami|medal/medale/medali|wstążkę do gimnastyki/wstążki do gimnastyki/wstążek do gimnastyki|bilet na lodowisko/bilety na lodowisko/biletów na lodowisko|ochraniacz/ochraniacze/ochraniaczy'),
+    ogrod: N3('nasionko/nasionka/nasionek|doniczkę/doniczki/doniczek|tulipana/tulipany/tulipanów|sadzonkę/sadzonki/sadzonek|truskawkę/truskawki/truskawek'),
+    teatr: N3('bilet do kina/bilety do kina/biletów do kina|maskę/maski/masek|kostium/kostiumy/kostiumów|plakat/plakaty/plakatów|bilet do teatru/bilety do teatru/biletów do teatru'),
+    podroze: N3('pocztówkę/pocztówki/pocztówek|magnes na lodówkę/magnesy na lodówkę/magnesów na lodówkę|znaczek/znaczki/znaczków|zdjęcie z podróży/zdjęcia z podróży/zdjęć z podróży|muszelkę/muszelki/muszelek'),
+    eksperymenty: N3('probówkę/probówki/probówek|magnes/magnesy/magnesów|kryształ/kryształy/kryształów|baterię/baterie/baterii|szkiełko/szkiełka/szkiełek'),
+    rekodzielo: N3('koralik/koraliki/koralików|bransoletkę/bransoletki/bransoletek|kłębek włóczki/kłębki włóczki/kłębków włóczki|pompon/pompony/pomponów|guzik/guziki/guzików'),
+    siatkowka: N3('piłkę do siatkówki/piłki do siatkówki/piłek do siatkówki|kartę z siatkarką/karty z siatkarkami/kart z siatkarkami|nakolannik/nakolanniki/nakolanników|bilet na mecz/bilety na mecz/biletów na mecz|koszulkę drużyny/koszulki drużyny/koszulek drużyny'),
+    swinki: N3('jabłko dla świnki/jabłka dla świnki/jabłek dla świnki|marchewkę dla świnki/marchewki dla świnki/marchewek dla świnki|naklejkę ze świnką/naklejki ze świnkami/naklejek ze świnkami|maskotkę świnki/maskotki świnek/maskotek świnek|kolbę kukurydzy/kolby kukurydzy/kolb kukurydzy'),
+    literatura: N3('zakładkę do książki/zakładki do książki/zakładek do książki|książkę/książki/książek|komiks/komiksy/komiksów|naklejkę z bohaterem/naklejki z bohaterami/naklejek z bohaterami|pocztówkę z ilustracją/pocztówki z ilustracjami/pocztówek z ilustracjami'),
+  };
+  Object.keys(K2N).forEach(k => { if (T[k]) T[k].k2n = K2N[k]; });
+  // przedmiot do zadania: losowy z listy motywu bieżącego zadania
+  MP.k2noun = (r, real) => { const th = MP.th(); let L = th.k2n || [th.k2t || T.szkola.k2t]; if (real) { const L2 = L.filter(w => !/ w grze$/.test(w[0])); L = L2.length ? L2 : T.szkola.k2n; } return r.pick(L); }; // real: bez przedmiotów z gier (nie kupujemy ich za prawdziwe pieniądze)
+  const virt = (W) => / w grze$/.test(W[0]);
+  const V2 = (n, sg, pl) => few(n) ? pl : sg; // zgoda czasownika z liczbą: „leżą 3”, „leży 5”
+  const DEFKIDS = [['Ola', 'f'], ['Kuba', 'm'], ['Zosia', 'f'], ['Antek', 'm'], ['Hania', 'f'], ['Staś', 'm'], ['Lena', 'f'], ['Franek', 'm'], ['Maja', 'f'], ['Tymek', 'm']];
+  const vg = (g, m, f) => g === 'f' ? f : m;
+  // historyjka do działania: op = add (a + b), sub (a − b, a > b), mul (a grup po b), div (a·b rozdzielone na b → a).
+  // Zwraca { prompt, ans – zdanie odpowiedzi, h – pierwsza wskazówka, W – przedmiot }. Liczby się nie zmieniają.
+  MP.wordAS = (r, a, b, op) => {
+    const W = MP.k2noun(r), v = virt(W), sh = (f) => f.replace(/ (w|z|ze|dla|na|do) .*$/, ''), WS = W.map(sh);
+    const t = (n) => n + ' ' + p(n, W[0], W[1], W[2]), ts = (n) => n + ' ' + p(n, WS[0], WS[1], WS[2]), G = WS[2]; // pełna nazwa raz, potem krótka: „4 diamenty w grze… ile diamentów”
+    const [nm, g] = MP.pickKid(r, DEFKIDS), [nm2] = MP.pickKid(r, DEFKIDS, nm);
+    const S = (arr) => { const ok = arr.filter(x => !(v && x.phys) && !(x.virt && !v)); return r.pick(ok); };
+    if (op === 'add') { const s = a + b; const T2 = [
+      { q: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dostał', 'Dostała') + ' jeszcze ' + ts(b) + '. Ile ' + G + ' ma teraz?', ans: nm + ' ma ' + ts(s) + '.', h: 'Czy teraz ma więcej, czy mniej? Więcej – dodajemy.' },
+      { q: 'Rano ' + nm + ' ' + vg(g, 'dostał', 'dostała') + ' od babci ' + t(a) + ', a po południu od dziadka ' + ts(b) + '. Ile ' + G + ' ' + vg(g, 'dostał', 'dostała') + ' razem?', ans: 'razem ' + ts(s) + '.', h: 'Od babci i od dziadka – łączymy, czyli dodajemy.' },
+      { q: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + ts(b) + '. Ile ' + G + ' mają razem?', ans: 'razem mają ' + ts(s) + '.', h: '„Razem” – dodajemy.' },
+      { q: 'W poniedziałek ' + nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + t(a) + ', a we wtorek jeszcze ' + ts(b) + '. Ile ' + G + ' ' + vg(g, 'kupił', 'kupiła') + ' w sumie?', ans: 'w sumie ' + ts(s) + '.', h: 'Zakupy z dwóch dni łączymy – dodajemy.', phys: true },
+      { q: 'W pudełku ' + V2(a, 'było', 'były') + ' ' + t(a) + '. ' + nm + ' ' + vg(g, 'dołożył', 'dołożyła') + ' ' + ts(b) + '. Ile ' + G + ' jest teraz w pudełku?', ans: 'w pudełku jest ' + ts(s) + '.', h: 'Dołożono – jest więcej, więc dodajemy.', phys: true },
+      { q: nm + ' ' + vg(g, 'wygrał', 'wygrała') + ' w konkursie ' + t(b) + '. Wcześniej ' + vg(g, 'miał', 'miała') + ' ' + ts(a) + '. Ile ' + G + ' ma teraz?', ans: nm + ' ma ' + ts(s) + '.', h: 'Doszło więcej – dodajemy. Kolejność liczb w zadaniu nie ma znaczenia.' },
+    ]; const x = S(T2); return { prompt: x.q, ans: x.ans, h: x.h, W }; }
+    if (op === 'sub') { const d = a - b; const T2 = [
+      { q: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dał', 'Dała') + ' ' + r.pick(['koledze', 'koleżance', 'młodszemu bratu', 'siostrze']) + ' ' + ts(b) + '. Ile ' + G + ' ' + vg(g, 'mu', 'jej') + ' zostało?', ans: 'zostało ' + ts(d) + '.', h: 'Zostało więcej czy mniej? Mniej – odejmujemy.' },
+      { q: 'W pudełku ' + V2(a, 'było', 'były') + ' ' + t(a) + '. ' + nm + ' ' + vg(g, 'wyjął', 'wyjęła') + ' ' + ts(b) + '. Ile ' + G + ' zostało w pudełku?', ans: 'w pudełku zostało ' + ts(d) + '.', h: 'Wyjęto część – zostało mniej, więc odejmujemy.', phys: true },
+      { q: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + ts(b) + '. O ile więcej ' + G + ' ma ' + nm + '?', ans: 'o ' + d + ' więcej.', h: '„O ile więcej” – sprawdzamy różnicę, czyli odejmujemy.' },
+      { q: nm + ' chce mieć ' + t(a) + '. Ma już ' + ts(b) + '. Ile ' + G + ' jeszcze ' + vg(g, 'mu', 'jej') + ' brakuje?', ans: 'brakuje ' + ts(d) + '.', h: 'Ile brakuje do ' + a + '? Odejmujemy to, co już jest.' },
+      { q: 'Na urodzinach ' + nm + ' ' + vg(g, 'rozdał', 'rozdała') + ' gościom ' + t(b) + ' ze swoich ' + a + ' ' + G + '. Ile ' + G + ' ' + vg(g, 'mu', 'jej') + ' zostało?', ans: 'zostało ' + ts(d) + '.', h: 'Rozdane ubywa – odejmujemy.', phys: true },
+      { q: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Podarował', 'Podarowała') + ' ' + ts(b) + ' na szkolny kiermasz. Ile ' + G + ' ' + vg(g, 'mu', 'jej') + ' zostało?', ans: 'zostało ' + ts(d) + '.', h: 'Podarowane ubywa – odejmujemy.', phys: true },
+      { q: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + ' i ' + vg(g, 'wydał', 'wydała') + ' ' + ts(b) + ' w sklepie w grze. Ile ' + G + ' ' + vg(g, 'mu', 'jej') + ' zostało?', ans: 'zostało ' + ts(d) + '.', h: 'Wydane ubywa – odejmujemy.', virt: true },
+    ]; const x = S(T2); return { prompt: x.q, ans: x.ans, h: x.h, W }; }
+    if (op === 'mul') { const m = a * b; const T2 = [
+      { q: 'W każdym z ' + a + ' pudełek jest po ' + t(b) + '. Ile ' + G + ' jest we wszystkich pudełkach?', ans: 'razem ' + ts(m) + '.', h: 'Każde pudełko ma tyle samo – to mnożenie.', phys: true },
+      { q: 'Przez ' + a + ' dni ' + nm + ' ' + vg(g, 'odkładał', 'odkładała') + ' codziennie po ' + t(b) + '. Ile ' + G + ' ' + vg(g, 'odłożył', 'odłożyła') + ' razem?', ans: 'razem ' + ts(m) + '.', h: 'Codziennie tyle samo – to mnożenie.' },
+      { q: a + ' dzieci dostało po ' + t(b) + '. Ile ' + G + ' dostały wszystkie dzieci razem?', ans: 'razem ' + ts(m) + '.', h: 'Każde dziecko dostało tyle samo – to mnożenie.' },
+      { q: 'Na ' + a + ' półkach leży po ' + t(b) + '. Ile ' + G + ' leży na wszystkich półkach?', ans: 'razem ' + ts(m) + '.', h: 'Na każdej półce tyle samo – to mnożenie.', phys: true },
+    ]; const x = S(T2); return { prompt: x.q, ans: x.ans, h: x.h, W }; }
+    const tot = a * b; const T2 = [
+      { q: nm + ' ' + vg(g, 'rozdzielił', 'rozdzieliła') + ' ' + t(tot) + ' po równo między ' + b + ' ' + p(b, 'dziecko', 'dzieci', 'dzieci') + '. Ile ' + G + ' dostało każde dziecko?', ans: 'każde dziecko dostało ' + ts(a) + '.', h: 'Dzielimy po równo – to dzielenie.' },
+      { q: nm + ' ' + vg(g, 'pakuje', 'pakuje') + ' ' + t(tot) + ' do woreczków, po ' + b + ' do każdego. Ile woreczków zapełni?', ans: a + ' ' + p(a, 'woreczek', 'woreczki', 'woreczków') + '.', h: 'Ile razy ' + b + ' mieści się w ' + tot + '? To dzielenie.', phys: true },
+      { q: t(tot).replace(/^./, (c) => c.toUpperCase()) + ' trzeba podzielić po równo na ' + b + ' ' + p(b, 'drużynę', 'drużyny', 'drużyn') + '. Ile ' + G + ' dostanie każda drużyna?', ans: 'każda drużyna dostanie ' + ts(a) + '.', h: 'Po równo na drużyny – to dzielenie.' },
+    ]; const x = S(T2); return { prompt: x.q, ans: x.ans, h: x.h, W, tot };
+  };
+  // krótka historyjka do „Oblicz” w kl. 1–3 (z zainteresowań; null = samo działanie). Losowanie na końcu generatora.
+  MP.storyAS = (r, a, b, sub) => {
+    const th = MP.curTheme; if (!th || th.id === 'szkola' || !r.chance(0.4)) return null;
+    const x = MP.wordAS(r, a, b, sub ? 'sub' : 'add');
+    return x.prompt + '<br><b>' + a + (sub ? ' − ' : ' + ') + b + ' = ?</b>';
+  };
 })(MP);
 
 </script>
@@ -5470,6 +5596,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     }
     it.skill = spec.skill; it.d = spec.d; if (!it.aspect) it.aspect = aspectOf(it);
     it.theme = MP.themeUsed && spec.th && spec.th !== 'szkola' ? spec.th : null;
+    if ((MP.people || []).length && typeof it.prompt === 'string' && /^[a-ząćęłńóśźż]/.test(it.prompt)) it.prompt = it.prompt.charAt(0).toUpperCase() + it.prompt.slice(1); // „babcia Ela miała…” na początku zdania
     return it;
   }
 
@@ -5975,8 +6102,8 @@ var MP = window.MP;
           idx.profiles.push({ id, name: P.name, av: P.av, grade: P.grade, created: old.created || Date.now(), updated: Date.now() });
           if (old.settings && old.settings.pin) idx.pin = old.settings.pin;
           lset(KEY_P(id), old); idx.last = id; ldel(OLD);
-        }
-        idx.updated = Date.now(); lset(KEY_I, idx);
+          idx.updated = Date.now(); lset(KEY_I, idx); // zapisujemy tylko po migracji – pusty indeks nie zostaje w przeglądarce (np. po wylogowaniu)
+        } else idx.updated = 0;
       }
       return idx;
     },
@@ -6862,6 +6989,101 @@ var MP = window.MP;
 
 </script>
 <script>
+/* games.js */
+/* Minigry – nagroda po opanowaniu tematu. Etap 1: silnik „Łapanie” (dotknij spadających poprawnych odpowiedzi).
+   Zasady: zawsze można pominąć, gra trwa 40 s i kończy się sama, brak kar za pomyłki, nic nie jest wysyłane poza zapis postępów. */
+(function () {
+  const MP = window.MP = window.MP || {};
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const fr = (a, b) => '<span class="gfr"><i>' + a + '</i><i>' + b + '</i></span>';
+  const isPrime = (n) => { if (n < 2) return false; for (let d = 2; d * d <= n; d++) if (n % d === 0) return false; return true; };
+
+  // Każda gra: id, nazwa, polecenie, item() -> { html, ok, why } (why – krótkie wyjaśnienie po złym dotknięciu)
+  const DEFS = {
+    1: () => ({ id: 'g1_10', name: 'Łap dziesiątkę', goal: 'Łap działania, które dają <b>10</b>.', short: 'wynik 10',
+      item() { const ok = Math.random() < 0.5; let a, b; if (ok) { a = rnd(1, 9); b = 10 - a; } else { do { a = rnd(1, 9); b = rnd(1, 9); } while (a + b === 10 || Math.abs(a + b - 10) > 3); }
+        return { html: a + ' + ' + b, ok, why: a + ' + ' + b + ' = ' + (a + b) }; } }),
+    2: () => { const even = Math.random() < 0.5; return { id: 'g2_par', name: even ? 'Łapanie parzystych' : 'Łapanie nieparzystych', goal: 'Łap liczby <b>' + (even ? 'parzyste' : 'nieparzyste') + '</b>.', short: even ? 'parzyste' : 'nieparzyste',
+      item() { const n = rnd(1, 99); return { html: String(n), ok: (n % 2 === 0) === even, why: n + ' jest ' + (n % 2 === 0 ? 'parzysta' : 'nieparzysta') }; } }; },
+    3: () => { const N = rnd(3, 9); return { id: 'g3_mul', name: 'Łapanie wyników ×' + N, goal: 'Łap liczby, które są wynikiem mnożenia <b>przez ' + N + '</b> (np. ' + N * 2 + ', ' + N * 3 + ').', short: 'wyniki ×' + N,
+      item() { if (Math.random() < 0.5) { const k = rnd(1, 10); return { html: String(N * k), ok: true }; } let n; do { n = rnd(N, N * 10); } while (n % N === 0); return { html: String(n), ok: false, why: n + ' nie jest w tabliczce ×' + N }; } }; },
+    4: () => { const d = pick([3, 5, 9]); return { id: 'g4_div', name: 'Sito podzielności', goal: 'Łap liczby <b>podzielne przez ' + d + '</b>.', short: 'podzielne przez ' + d,
+      item() { const ok = Math.random() < 0.5; let n; do { n = rnd(10, 300); } while ((n % d === 0) !== ok); return { html: String(n), ok, why: d === 5 ? 'ostatnia cyfra to nie 0 ani 5' : 'suma cyfr ' + String(n).split('').reduce((s, c) => s + +c, 0) + ' nie dzieli się przez ' + d }; } }; },
+    5: () => ({ id: 'g5_prime', name: 'Pierwsze na celowniku', goal: 'Łap <b>liczby pierwsze</b> (dzielą się tylko przez 1 i przez siebie).', short: 'liczby pierwsze',
+      item() { const ok = Math.random() < 0.5; let n; do { n = rnd(2, 70); } while (isPrime(n) !== ok || (!ok && n % 2 === 0 && Math.random() < 0.6)); let why = ''; if (!ok) { for (let d = 2; d < n; d++) if (n % d === 0) { why = n + ' = ' + d + ' · ' + n / d; break; } } return { html: String(n), ok, why }; } }),
+    6: () => { const T = pick([[1, 2], [1, 3], [1, 4], [3, 4]]); const tv = T[0] / T[1]; return { id: 'g6_frac', name: 'Łapanie ułamków', goal: 'Łap ułamki <b>równe ' + fr(T[0], T[1]) + '</b>' + (T[1] === 2 || T[1] === 4 ? ' (także w postaci dziesiętnej)' : '') + '.', short: 'równe ' + T[0] + '/' + T[1],
+      item() { if (Math.random() < 0.5) { if ((T[1] === 2 || T[1] === 4) && Math.random() < 0.25) return { html: String(tv).replace('.', ','), ok: true }; const k = rnd(2, 8); return { html: fr(T[0] * k, T[1] * k), ok: true }; }
+        let a, b; do { b = rnd(2, 16); a = rnd(1, b - 1); } while (Math.abs(a / b - tv) < 1e-9); return { html: fr(a, b), ok: false, why: a + '/' + b + (a / b > tv ? ' to więcej' : ' to mniej') + ' niż ' + T[0] + '/' + T[1] }; } }; },
+    7: () => { const v = pick(['x', 'a', 'y']); const o = v === 'x' ? 'y' : 'x'; return { id: 'g7_like', name: 'Zbieracz wyrazów podobnych', goal: 'Łap wyrazy <b>podobne do 3' + v + '</b>.', short: 'podobne do 3' + v,
+      item() { const k = pick([-5, -4, -3, -2, -1, 2, 4, 5, 6, 7, 8, 9]); const c = k === -1 ? '−' : String(k).replace('-', '−');
+        if (Math.random() < 0.5) return { html: c + v, ok: true };
+        const w = pick([[c + v + '²', 'inna potęga'], [c + o, 'inna litera'], [String(Math.abs(k) + 1), 'brak litery'], [c + v + o, 'dwie litery']]); return { html: w[0], ok: false, why: w[1] }; } }; },
+    8: () => ({ id: 'g8_irr', name: 'Łapanie niewymiernych', goal: 'Łap liczby <b>niewymierne</b> (nie da się ich zapisać jako ułamek).', short: 'niewymierne',
+      item() { if (Math.random() < 0.5) return { html: pick(['√2', '√3', '√5', '√6', '√7', '√8', '√10', '√11', 'π', '2√3', '3√2', '1 + √2']), ok: true };
+        const w = pick([['√4', '√4 = 2'], ['√9', '√9 = 3'], ['√16', '√16 = 4'], ['√25', '√25 = 5'], ['0,5', '0,5 = 1/2'], ['0,(3)', '0,(3) = 1/3'], ['−7', 'liczba całkowita'], ['√49', '√49 = 7'], ['3,14', '3,14 = 314/100'], ['√100', '√100 = 10']]); return { html: w[0], ok: false, why: w[1] }; } }),
+  };
+  MP.games = {
+    pick(grade) { const f = DEFS[grade] || DEFS[6]; return f(); },
+    DURATION: 40,
+    // wyświetla grę w kontenerze el; onEnd({score, skipped, gid})
+    mount(el, def, opt) {
+      opt = opt || {}; const grade = opt.grade || 6;
+      const fall = grade <= 3 ? 6.5 : grade <= 6 ? 5.2 : 4.6; // sekundy na przelot
+      const every = grade <= 3 ? 1.15 : 0.95;
+      const best = opt.best || 0;
+      let started = false, score = 0, miss = 0, t = 0, spawnT = 0.3, last = 0, raf = 0, running = false, ended = false;
+      const items = [];
+      el.innerHTML = '<div class="game" role="region" aria-label="Minigra: ' + def.name + '"><div class="ghead"><b>' + def.name + '</b><button class="btn sm ghost" data-g="skip">Pomiń grę</button></div>' +
+        '<div class="gintro"><p class="ggoal">' + def.goal + '</p><p class="small muted">Dotykaj tylko tego, co pasuje. Pomyłki nie odbierają punktów. Gra trwa ' + MP.games.DURATION + ' sekund.</p><div class="bar2"><button class="btn pri" data-g="go">Start!</button><button class="btn ghost" data-g="skip">Nie teraz</button></div></div>' +
+        '<div class="gplay" hidden><div class="gbar"><span class="gsc" aria-live="polite">0</span><span class="gtgt">' + def.short + '</span><span class="gtime"><i></i></span></div><div class="garea"></div><p class="gwhy" aria-live="polite"></p></div>' +
+        '<div class="gend" hidden></div></div>';
+      const root = el.querySelector('.game'), area = el.querySelector('.garea'), sc = el.querySelector('.gsc'), tm = el.querySelector('.gtime i'), why = el.querySelector('.gwhy');
+      const end = (skipped) => {
+        if (ended) return; ended = true; running = false; cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', vis);
+        if (skipped) { opt.onEnd && opt.onEnd({ score, skipped: true, gid: def.id }); return; }
+        el.querySelector('.gplay').hidden = true; const ge = el.querySelector('.gend'); ge.hidden = false;
+        const rec = score > best && best > 0;
+        ge.innerHTML = '<p class="gbig">' + (score >= 10 ? '🎉' : score >= 5 ? '👏' : '🙂') + ' Złapane: <b>' + score + '</b></p>' + (rec ? '<p><b>Nowy rekord!</b> Poprzednio: ' + best + '.</p>' : best ? '<p class="small muted">Twój rekord: ' + Math.max(best, score) + '</p>' : '') + '<div class="bar2"><button class="btn pri" data-g="done">Wracam do nauki →</button></div>';
+        ge.querySelector('[data-g=done]').focus();
+      };
+      const vis = () => { if (document.hidden) { running = false; cancelAnimationFrame(raf); } else if (!ended && !el.querySelector('.gplay').hidden) { running = true; last = performance.now(); raf = requestAnimationFrame(loop); } };
+      function spawn() {
+        const it = def.item(); const b = document.createElement('button'); b.type = 'button'; b.className = 'gitem'; b.innerHTML = it.html;
+        const W = area.clientWidth || 320; const x = 8 + Math.random() * Math.max(10, W - 110);
+        b.style.left = x + 'px'; const o = { el: b, it, y: -60, hit: false }; items.push(o); area.appendChild(b);
+        b.addEventListener('pointerdown', (e) => { e.preventDefault(); tap(o); });
+        b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(o); } });
+      }
+      function tap(o) {
+        if (o.hit || ended) return; o.hit = true;
+        if (o.it.ok) { score++; sc.textContent = score; o.el.classList.add('gok'); o.el.innerHTML += ' <small>+1</small>'; why.textContent = ''; }
+        else { miss++; o.el.classList.add('gno'); why.textContent = 'Nie ta' + (o.it.why ? ': ' + o.it.why.replace(/<[^>]+>/g, '') : '') + '. Szukamy: ' + def.short.replace(/<[^>]+>/g, '') + '.'; }
+        setTimeout(() => { o.el.remove(); }, 380);
+      }
+      function loop(ts) {
+        if (!running) return; const dt = Math.min(0.1, (ts - last) / 1000); last = ts; t += dt;
+        const H = area.clientHeight || 360;
+        spawnT -= dt; if (spawnT <= 0) { spawn(); spawnT = every * (0.8 + Math.random() * 0.4); }
+        for (let i = items.length - 1; i >= 0; i--) { const o = items[i]; if (o.hit) { items.splice(i, 1); continue; } o.y += (H + 60) / fall * dt; o.el.style.transform = 'translateY(' + o.y + 'px)'; if (o.y > H) { o.el.remove(); items.splice(i, 1); } }
+        tm.style.width = Math.max(0, 100 - t / MP.games.DURATION * 100) + '%';
+        if (t >= MP.games.DURATION) return end(false);
+        raf = requestAnimationFrame(loop);
+      }
+      root.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-g]'); if (!b) return;
+        if (b.dataset.g === 'skip') return end(!started);
+        if (b.dataset.g === 'done') return opt.onEnd && opt.onEnd({ score, skipped: false, gid: def.id });
+        if (b.dataset.g === 'go') { started = true; el.querySelector('.gintro').hidden = true; el.querySelector('.gplay').hidden = false; el.querySelectorAll('.ghead [data-g=skip]').forEach(x => x.textContent = 'Zakończ'); running = true; last = performance.now(); document.addEventListener('visibilitychange', vis); raf = requestAnimationFrame(loop); }
+      });
+      // test/podgląd: przyspieszenie czasu
+      return { end, state: () => ({ score, miss, t, running, ended, items: items.length }), _tick: (sec) => { t += sec; } };
+    }
+  };
+})();
+
+</script>
+<script>
 /* ui.js */
 /* ui.js — interfejs: panel ucznia, działy, tematy, lekcje z podpowiedziami, sprawdzian, panel rodzica. */
 (function () {
@@ -6882,7 +7104,7 @@ var MP = window.MP;
   }
   let PEND = null, DIRTY = false; // zapis dziecka jest właśnie pobierany z konta – do tego czasu nie nadpisujemy konta starszym/pustym stanem
   const save = () => { if (S && CID) { if (PEND === CID) { DIRTY = true; MP.store.saveLocal(S, CID); } else MP.store.save(S, CID); syncIdxEntry(); } };
-  const applyProfile = () => { MP.interests = (S && S.profile && S.profile.interests) || []; MP.setGrade((S && S.profile && S.profile.grade) || 6); };
+  const applyProfile = () => { MP.interests = (S && S.profile && S.profile.interests) || []; MP.people = (S && S.profile && S.profile.people) || []; MP.setGrade((S && S.profile && S.profile.grade) || 6); };
   function activate(id, quiet) {
     const e = IDX.profiles.find(p => p.id === id); if (!e) return false;
     CID = id; S = MP.store.loadProfile(id);
@@ -7041,6 +7263,7 @@ var MP = window.MP;
     else if (v === 'topic') $app.innerHTML = vTopic(view.id);
     else if (v === 'lesson') { $app.innerHTML = vLesson(); afterLessonRender(); }
     else if (v === 'summary') $app.innerHTML = vSummary();
+    else if (v === 'game') { $app.innerHTML = vGame(); afterGameRender(); }
     else if (v === 'locked') $app.innerHTML = vLocked();
     else if (v === 'sprawdzian') $app.innerHTML = vPrep();
     else if (v === 'exam') { $app.innerHTML = vExam(); afterExamRender(); }
@@ -7226,9 +7449,40 @@ var MP = window.MP;
     if (mode === 'diag' && S.prep) { E.prepMakePlan(S, sum.results); }
     if (mode === 'prep' && S.prep) E.prepAfterSession(S, sum);
     if (mode === 'check' && S.prep && s.prepCheck) { S.prep.checks.push({ t: now(), pct: Math.round(sum.ok / Math.max(1, sum.n) * 100) }); }
+    sum.game = gameOffer(sum, mode);
     save(); sum.badges = badgesCheck(true).map(b => b.name);
     view = { name: 'summary', from: view.from, sum };
   }
+  // minigra jako nagroda: po opanowaniu całego tematu albo zaliczeniu testu działu (rodzic może wyłączyć)
+  function gameOffer(sum, mode) {
+    if (!S.settings || S.settings.games === false || !MP.games) return null;
+    if (mode === 'chtest') return sum.ch && sum.ch.pass ? { why: 'Dział zaliczony' } : null;
+    if (!['learn', 'prep', 'review', 'mixed', 'repair'].includes(mode)) return null;
+    const ok = (id) => { const x = S.skills[id] || {}; return (x.lvl || 0) >= 4 || !!x.mastery || !!x.l4At; };
+    for (const id of Object.keys(sum.levels || {})) { const l = sum.levels[id]; if (!(l.to >= 4 && l.from < 4)) continue;
+      const tp = topicOf(id); if (!tp) continue; const sk = tp.skills.filter(MP.isReady);
+      if (sk.length && sk.every(ok)) return { why: 'Temat opanowany', topic: tp.name }; }
+    return null;
+  }
+  function vGame() { return '<div class="lesson"><section class="bigcard" id="gamebox"></section></div>'; }
+  function afterGameRender() {
+    const box = document.getElementById('gamebox'); if (!box) return;
+    const g = S.games || (S.games = { n: 0, best: {} }); const def = MP.games.pick(MP.grade);
+    MP.games.mount(box, def, { grade: MP.grade, best: g.best[def.id] || 0, onEnd: (r) => {
+      if (!r.skipped) { g.n = (g.n || 0) + 1; g.best[r.gid] = Math.max(g.best[r.gid] || 0, r.score); }
+      if (view.sum) view.sum.gameDone = true; save();
+      const back = view.back || { name: 'start' }; view = back; render(); window.scrollTo(0, 0); } });
+  }
+  // przykład do karty wyjaśnienia: łatwy, ale nie „pusty” (np. bez porównania 1 □ 1 i z co najmniej 2 krokami, jeśli się da)
+  function exItem(skill) {
+    let best = null;
+    for (let k = 0; k < 10; k++) { let it; try { it = E.buildItem(E.makeSpec(skill, 1, (SK[skill].types[1] || ['input'])[0])); } catch (e) { continue; }
+      const t = U.plain(it.prompt).replace(/<[^>]+>/g, ' ');
+      const dull = /(^|[^\d,])(\d+(?:,\d+)?)\s*□\s*\2(?![\d,])/.test(t) || (it.answer && it.answer.kind === 'num' && it.answer.value && it.answer.value.n === 0);
+      if (!dull && it.sol && it.sol.length > 1) return it; if (!dull && !best) best = it; }
+    return best;
+  }
+  const isTestSess = (s) => !!(s && (s.fixed || s.mode === 'check')); // testy: bez informacji „dobrze/źle” w trakcie
   function curItem() { const c = S.session && S.session.cur; if (!c || !c.spec) return null; if (!c._item) Object.defineProperty(c, '_item', { value: E.buildItem(c.spec), enumerable: false, writable: true }); return c._item; }
   function modeTag(s, spec) {
     if (spec && spec.analog) return 'Podobne zadanie – spróbuj jeszcze raz';
@@ -7279,21 +7533,23 @@ var MP = window.MP;
   }
   function answerWidget(it, c, examMode, examVal) {
     const disabled = !examMode && c && c.done ? ' disabled' : '';
+    const fx = !examMode && isTestSess(S.session); // w testach: bez zieleni/czerwieni – wynik dopiero na końcu
     const val = examMode ? examVal : (c ? (c.draft != null && !c.done ? c.draft : c.resp) : null);
     if (it.type === 'input' || it.type === 'fill') {
-      const stt = !examMode && c ? (c.done ? (c.ok ? 'ok' : 'shown') : (c.wrongNow ? 'no' : '')) : '';
+      const stt = !examMode && c && !fx ? (c.done ? (c.ok ? 'ok' : 'shown') : (c.wrongNow ? 'no' : '')) : '';
       return MP.mf.render(val || '', Object.assign({ disabled: !!disabled, unit: it.unit, state: stt }, fieldOpts(it)));
     }
     if (it.type === 'choice' || it.type === 'why' || it.type === 'error') {
       return '<div class="opts">' + it.options.map((o, i) => {
         let cls = 'opt'; if (examMode && +val === i) cls += ' sel';
         if (!examMode && c && !c.done && c.sel === i) cls += ' sel';
-        if (!examMode && c && c.picked) { if (c.picked.includes(i)) cls += i === it.answer.correct ? ' right' : ' wrong'; if (c.done && i === it.answer.correct) cls += ' right'; }
+        if (fx && c && c.picked && c.picked.includes(i)) cls += ' sel';
+        else if (!examMode && c && c.picked) { if (c.picked.includes(i)) cls += i === it.answer.correct ? ' right' : ' wrong'; if (c.done && i === it.answer.correct) cls += ' right'; }
         return '<button class="' + cls + '" data-opt="' + i + '" aria-pressed="' + (!examMode && c ? c.sel === i : +val === i) + '"' + (!examMode && c && (c.done || (c.picked || []).includes(i)) ? ' disabled' : '') + '>' + M(o.label) + '</button>';
       }).join('') + '</div>';
     }
     if (MP.ix.has(it.type)) {
-      const stt = !examMode && c ? (c.done ? (c.ok ? 'ok' : 'shown') : (c.wrongNow ? 'no' : '')) : '';
+      const stt = !examMode && c && !fx ? (c.done ? (c.ok ? 'ok' : 'shown') : (c.wrongNow ? 'no' : '')) : '';
       return MP.ix.render(it, val, { disabled: !!disabled, state: stt });
     }
     if (it.type === 'order') {
@@ -7369,7 +7625,7 @@ var MP = window.MP;
     if (card.card === 'chtest') { const dz = MP.DZIALY.find(x => x.id === card.dz) || { name: '' }; return '<section class="bigcard"><span class="chip">Test działu</span><h1 style="margin-top:10px">' + esc(dz.name) + '</h1><p>Wszystko z tego działu jest już przećwiczone. Teraz krótki test: <b>' + card.n + ' ' + U.pl(card.n, 'zadanie', 'zadania', 'zadań') + '</b> z całego działu, bez wskazówek. Jeśli czegoś nie wiesz, kliknij „Nie wiem”.</p><p>Na końcu zobaczysz swoje odpowiedzi. Po zdanym teście dział jest w pełni zaliczony. A jeśli coś nie wyjdzie, powtórzymy to i spróbujesz jeszcze raz.</p><button class="btn pri" data-act="cardnext">Zaczynam test →</button></section>'; }
     if (card.card === 'diag') return '<section class="bigcard"><h2>Sprawdźmy, gdzie jest kłopot</h2><p>Twoje ostatnie odpowiedzi trudno mi zrozumieć – nie chcę zgadywać, co poszło nie tak. W następnym zadaniu wybierz odpowiedź z kilku. Każda błędna odpowiedź odpowiada innej pomyłce, więc po niej będę wiedział, jak Ci pomóc.</p><button class="btn pri" data-act="cardnext">Dobrze →</button></section>';
     if (card.card === 'repair') {
-      const er = card.code ? MP.err(card.code) : null; const it0 = (() => { try { return E.buildItem(E.makeSpec(card.skill, 1, (SK[card.skill].types[1] || ['input'])[0])); } catch (e) { return null; } })();
+      const er = card.code ? MP.err(card.code) : null; const it0 = exItem(card.skill);
       let h = '<section class="bigcard remed"><span class="chip">Ścieżka naprawcza · runda ' + card.round + '</span><h2 style="margin-top:10px">' + esc(skName(card.skill)) + '</h2>';
       if (card.rkind === 'calc') h += '<p><b>Zasadę rozumiesz</b> – kłopot był w samym liczeniu. Nie wracamy do tłumaczenia. Zrobimy kilka zadań rachunkowych w spokojnym tempie. Rada: zapisuj każdy krok i na końcu sprawdź wynik działaniem odwrotnym.</p>';
       else if (card.rkind === 'read') h += '<p>Kłopot był w <b>czytaniu polecenia</b>. Przy każdym zadaniu: przeczytaj je dwa razy, podkreśl, o co pytają, i na końcu sprawdź, czy odpowiedź pasuje do pytania.</p>';
@@ -7395,7 +7651,7 @@ var MP = window.MP;
       // przykład krok po kroku wygenerowany na nowo (łatwy)
       const exSkill = card.reason === 'probe' ? card.skill : card.skill;
       try {
-        const sp = E.makeSpec(exSkill, 1, (SK[exSkill].types[1] || ['input'])[0]); const ex = E.buildItem(sp);
+        const ex = exItem(exSkill); if (!ex) throw 0;
         h += '<div class="ex"><b>Zobacz na przykładzie:</b><div class="q" style="font-size:18px">' + M(ex.prompt) + '</div>' + (ex.visual || '') + '<ol>' + ex.sol.map((x, j) => '<li class="' + (j ? 'hid' : '') + '">' + M(x) + '</li>').join('') + '</ol>' + (ex.sol.length > 1 ? '<button class="btn sm" data-act="exstep">Pokaż kolejny krok</button>' : '') + '</div>';
       } catch (e) { }
       if (card.remedy) h += '<p>Najpierw krótko przećwiczymy <b>' + esc(skName(card.remedy)) + '</b> – to podstawa tego tematu. Potem wrócimy, zaczynając od łatwiejszych zadań.</p>';
@@ -7446,9 +7702,8 @@ var MP = window.MP;
     const rec = E.record(S, meta, res, t);
     if (c.attempts === 1) { E.afterAnswer(S, c.spec, rec, t); noteResult(c, meta.resp); }
     if (it.writeUp && c.wu && c.wu.trim()) { S.writeups.push({ t, skill: c.spec.skill, prompt: U.plain(it.prompt).replace(/<[^>]+>/g, ' '), text: c.wu.trim().slice(0, 1500), ok: !!res.ok }); if (S.writeups.length > 60) S.writeups.shift(); c.wu = ''; }
-    const fixed = !!s.fixed;
-    if (fixed && (s.mode === 'mastery' || s.mode === 'chtest')) { c.done = true; c.fb = '<div class="fb info">Zapisane. Wynik całego testu zobaczysz na końcu.</div>'; save(); return rerenderLesson(); }
-    if (fixed) { c.done = true; c.fb = '<div class="fb info">Zapisane. ' + (res.ok ? 'Dobrze!' : 'Do tego wrócimy w planie powtórki.') + '</div>'; save(); return rerenderLesson(); }
+    const fixed = isTestSess(s);
+    if (fixed) { c.done = true; c.fb = '<div class="fb info"><b>Zapisane ✓</b>' + (s.step <= 1 || !s.fxNoted ? ' W teście nie pokazuję od razu, czy dobrze – wszystkie odpowiedzi zobaczysz na końcu.' : '') + '</div>'; s.fxNoted = true; save(); return rerenderLesson(); }
     c.wrongNow = !res.ok;
     if (res.ok) {
       c.done = true; c.ok = true;
@@ -7510,7 +7765,7 @@ var MP = window.MP;
     if (i < 0 || i + 1 >= t.trim().length || t.length < 90) return '<p>' + M(t) + '</p>';
     return '<p>' + M(t.slice(0, i + 1)) + '</p><details class="more"><summary>Więcej</summary><p>' + M(t.slice(i + 1).trim()) + '</p></details>';
   }
-  function rerenderLesson() { document.querySelectorAll('.chipx.ghost').forEach(g => g.remove()); if (view.name === 'lesson') { $app.innerHTML = vLesson(); afterLessonRender(); $app.insertAdjacentHTML('beforeend', '<p class="foot">' + storageLine() + '</p>'); const fb = $app.querySelector('.fb'); if (fb && fb.scrollIntoView) fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } }
+  function rerenderLesson() { document.querySelectorAll('.chipx.ghost').forEach(g => g.remove()); if (view.name === 'lesson') { $app.innerHTML = vLesson(); afterLessonRender(); $app.insertAdjacentHTML('beforeend', '<p class="foot">' + storageLine() + '</p>'); const fb = $app.querySelector('.fb'); if (fb && fb.scrollIntoView) fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); const live = document.getElementById('srlive'); if (live) { live.textContent = ''; if (fb) setTimeout(() => { live.textContent = (fb.innerText || fb.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 300); }, 60); } } }
 
   // ---------- PODSUMOWANIE LEKCJI ----------
   // lista odpowiedzi z testu: ✓ albo poprawna odpowiedź obok – bez czerwieni
@@ -7542,6 +7797,7 @@ var MP = window.MP;
     if (sum.mode === 'chtest' && sum.ch) { const dz = MP.DZIALY.find(x => x.id === sum.dz) || { name: '' }; h += '<p>' + (sum.ch.pass ? '<b>' + esc(dz.name) + '</b> – dział jest w pełni zaliczony. Za jakiś czas poproszę o krótkie powtórki, żeby wiedza została na dłużej.' : 'Dobrze poszło ' + sum.ch.ok + ' z ' + sum.ch.n + '. Do zaliczenia działu potrzeba ok. 8 na 10. Powtórzymy kilka rzeczy i spróbujesz jeszcze raz.') + '</p>'; }
     if (sum.mode === 'repair' && sum.repair) h += '<p>' + (sum.repair.good ? 'Ostatnie zadania poszły samodzielnie i bezbłędnie. Możesz iść dalej.' : 'Ostatnie zadania jeszcze sprawiały kłopot. Zrobimy kolejną rundę – z innym wyjaśnieniem.') + '</p>';
     if (sum.badges && sum.badges.length) h += '<p class="newbadge"><span class="ico">★</span> Nowa odznaka: <b>' + sum.badges.map(esc).join(', ') + '</b></p>';
+    if (sum.game && !sum.gameDone && MP.games) h += '<div class="goffer"><p><b>' + esc(sum.game.why) + '! 🎉</b>' + (sum.game.topic ? ' (' + esc(sum.game.topic) + ')' : '') + '<br>W nagrodę możesz zagrać w krótką minigrę – ' + MP.games.DURATION + ' sekund.</p><div class="bar2"><button class="btn pri" data-act="game">Zagram! 🎮</button><button class="btn ghost" data-act="nogame">Nie teraz</button></div></div>';
     if (isTest) h += answersList(sum.results);
     else {
       h += '<p>Zrobione zadania: <b>' + sum.n + '</b></p>';
@@ -7589,12 +7845,20 @@ var MP = window.MP;
     const P = S.prep;
     if (!P) {
       let h = '<h1>Przygotuj się do sprawdzianu</h1><p>Wybierz tematy, z których masz sprawdzian. Najpierw zrobimy krótki test diagnostyczny, potem ułożę plan powtórki, a na koniec próbny sprawdzian z limitem czasu.</p><form id="prepform" class="stack">';
+      { const t0 = now(), recent = Object.keys(MP.TOPICS).filter(id => MP.TOPICS[id].skills.some(sk => MP.isReady(sk) && S.skills[sk] && S.skills[sk].lastT && t0 - S.skills[sk].lastT < 21 * E.DAY));
+        const rec0 = E.recommend(S, t0), curDz = rec0 && rec0.skill ? MP.DZIALY.find(dz => dz.topics.some(tp => tp.skills.includes(rec0.skill))) : null;
+        const tiles = [];
+        if (recent.length) tiles.push('<button type="button" class="btn sm" data-ptiles="' + recent.join(',') + '">Ostatnio ćwiczone (' + recent.length + ')</button>');
+        if (curDz) tiles.push('<button type="button" class="btn sm" data-ptiles="' + curDz.topics.filter(t => t.skills.some(MP.isReady)).map(t => t.id).join(',') + '">Bieżący dział: ' + esc(curDz.name) + '</button>');
+        h += '<label class="row">Kiedy sprawdzian? <input type="date" id="pdate" min="' + new Date(t0).toISOString().slice(0, 10) + '"></label>';
+        if (tiles.length) h += '<div><p class="small muted" style="margin:0 0 6px">Szybki wybór:</p><div class="row">' + tiles.join('') + '</div></div>'; }
       MP.DZIALY.forEach(dz => { const tps = dz.topics.filter(t => t.skills.some(MP.isReady)); if (!tps.length) return; h += '<details' + (dz.id === 'duz' ? ' open' : '') + '><summary>' + esc(dz.name) + ' <label class="small" style="margin-left:8px;font-weight:400" onclick="event.stopPropagation()"><input type="checkbox" class="alldz"> cały dział</label></summary><div class="list" style="margin-top:8px">' + tps.map(t => '<label class="check"><input type="checkbox" name="t" value="' + t.id + '"><span><b>' + esc(t.name) + '</b><br><span class="small muted">' + t.skills.filter(MP.isReady).map(skName).join(' · ') + '</span></span></label>').join('') + '</div></details>'; });
       h += '<div><button class="btn pri" type="submit">Zaczynamy przygotowania →</button></div></form>';
       if (S.exams.length) h += '<section class="card" style="margin-top:16px"><h3>Poprzednie próbne sprawdziany</h3><div class="list">' + S.exams.slice().reverse().map((x, i) => '<button class="li" data-examres="' + (S.exams.length - 1 - i) + '"><span class="t"><b>' + new Date(x.t).toLocaleDateString('pl-PL') + ' · ' + x.pct + '%</b><small>' + x.topics.map(t => MP.TOPICS[t] ? MP.TOPICS[t].name : t).join(', ') + '</small></span></button>').join('') + '</div></section>';
       return h;
     }
     let h = '<h1>Przygotowanie do sprawdzianu</h1><p class="muted">Tematy: ' + P.topics.map(t => esc(MP.TOPICS[t].name)).join(', ') + '</p>';
+    if (P.date) { const days = Math.ceil((new Date(P.date + 'T08:00') - now()) / E.DAY); h += '<p class="chip ' + (days <= 2 ? 'review' : 'progress') + '">' + (days > 1 ? 'Do sprawdzianu: ' + days + ' dni' + (P.phase === 'practice' && days > 0 ? ' · ' + Math.max(1, Math.ceil(P.plan.filter(p => p.status !== 'ok').length / days)) + ' ' + U.pl(Math.max(1, Math.ceil(P.plan.filter(p => p.status !== 'ok').length / days)), 'umiejętność', 'umiejętności', 'umiejętności') + ' dziennie' : '') : days === 1 ? 'Sprawdzian jutro – powodzenia!' : days === 0 ? 'Sprawdzian dzisiaj – powodzenia!' : 'Termin sprawdzianu minął') + '</p>'; }
     const steps = [['diag', 'Test diagnostyczny'], ['practice', 'Plan powtórki i ćwiczenia'], ['exam', 'Próbny sprawdzian']];
     const pi = P.phase === 'diag' ? 0 : P.phase === 'practice' ? 1 : 2;
     h += '<div class="row" style="margin-bottom:14px">' + steps.map((s, i) => '<span class="chip ' + (i < pi ? 'done' : i === pi ? 'progress' : 'new') + '">' + (i + 1) + '. ' + s[1] + '</span>').join('') + '</div>';
@@ -7692,7 +7956,7 @@ var MP = window.MP;
   const linkForm = (pr) => '<form id="linkform" data-id="' + pr.id + '" class="card" style="margin:6px 0 10px;background:var(--paper2,#f6f7fb)"><label for="lem"><b>Adres Gmail / konta Google dziecka (' + esc(pr.name) + ')</b></label><p class="small muted" style="margin:4px 0 8px">Dziecko zaloguje się tym kontem na tej stronie i zobaczy tylko swoje lekcje – bez panelu rodzica i bez innych dzieci. Postępy będą widoczne tutaj.</p><div class="row"><input id="lem" type="email" autocomplete="off" value="' + esc(pr.email || '') + '" placeholder="np. kuba.nowak@gmail.com" style="flex:1;min-width:200px"><button class="btn sm pri" type="submit">Zapisz</button>' + (pr.email ? '<button class="btn sm ghost" type="button" data-punlink="' + pr.id + '">Odłącz konto</button>' : '') + '<button class="btn sm ghost" type="button" data-act="linkcancel">Anuluj</button></div><p class="small" id="lemmsg" role="status"></p></form>';
   function kidSettingsLearnHTML() {
     let h = '';
-    h += '<section class="card" style="margin-top:16px"><h2>Nauka i dane</h2><div class="stack"><label class="row">Zadań w jednej serii: <select id="slen" class="btn sm">' + [3, 5, 8, 10].map(n => '<option' + ((S.settings.seriesLen || 5) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label><p class="small muted" style="margin:-6px 0 0">Po serii dziecko wybiera: jeszcze jedna seria albo koniec. Ile serii potrzeba do opanowania, zależy od tego, jak dziecku idzie.</p><label class="check"><input type="checkbox" id="sgrade"' + (S.settings.showGrade ? ' checked' : '') + '><span>Pokazuj orientacyjną ocenę szkolną po próbnym sprawdzianie</span></label>';
+    h += '<section class="card" style="margin-top:16px"><h2>Nauka i dane</h2><div class="stack"><label class="row">Zadań w jednej serii: <select id="slen" class="btn sm">' + [3, 5, 8, 10].map(n => '<option' + ((S.settings.seriesLen || 5) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label><p class="small muted" style="margin:-6px 0 0">Po serii dziecko wybiera: jeszcze jedna seria albo koniec. Ile serii potrzeba do opanowania, zależy od tego, jak dziecku idzie.</p><label class="check"><input type="checkbox" id="sgames"' + (S.settings.games !== false ? ' checked' : '') + '><span>Minigra w nagrodę po opanowaniu tematu (40 s, zawsze można pominąć)</span></label><p class="small muted" style="margin:-6px 0 0">Gra ćwiczy materiał z klasy dziecka. <button class="btn sm ghost" data-act="gamedemo">Wypróbuj grę</button></p><label class="check"><input type="checkbox" id="sgrade"' + (S.settings.showGrade ? ' checked' : '') + '><span>Pokazuj orientacyjną ocenę szkolną po próbnym sprawdzianie</span></label>';
     h += '<details><summary>Kod postępów (kopia zapasowa / przeniesienie na inne urządzenie)</summary><p class="small muted">Skopiuj kod i zachowaj go. Na innym urządzeniu wklej go poniżej i kliknij „Wczytaj". Kod zawiera tylko postępy w nauce.</p><textarea id="code" readonly></textarea><div class="bar2"><button class="btn sm" data-act="mkcode">Pokaż kod</button><button class="btn sm" data-act="copycode">Kopiuj</button></div><textarea id="incode" placeholder="Wklej tu kod postępów"></textarea><div class="bar2"><button class="btn sm" data-act="loadcode">Wczytaj kod</button></div><p id="codemsg" class="small"></p></details>';
     h += '<div><button class="btn sm ghost" data-act="reset">Wyczyść wszystkie postępy…</button></div></div></section>';
     return h;
@@ -7748,13 +8012,13 @@ var MP = window.MP;
       body = '<h1>Ustawienia ogólne</h1><p class="muted">Dotyczą całego konta rodzica i wszystkich dzieci.</p>';
       if (MP.store.auth.configured()) body += '<section class="card sset"><h2>Konto rodzica</h2>' + (who ? '<div class="srow"><div class="st">' + esc(who) + '<small>' + (viaG ? 'Logowanie kontem Google' : 'Logowanie e-mailem i hasłem' + (MP.store.auth.verified() ? ' · adres potwierdzony' : ' · adres niepotwierdzony')) + '</small></div></div>' + (viaG ? '' : '<div class="srow"><div class="st">Hasło<small>Wyślemy link do ustawienia nowego hasła na ' + esc(who) + '.</small></div><button class="btn sm" data-act="pwreset">Zmień hasło</button></div>') + '<div class="srow"><div class="st">Wyloguj z tego urządzenia<small>Postępy zostaną na koncie.</small></div><button class="btn sm" data-act="glogout">Wyloguj</button></div>' : '<div class="srow"><div class="st">Nie zalogowano – postępy są tylko w tej przeglądarce.</div><button class="btn sm pri" data-act="gloginp">Zaloguj się jako rodzic</button></div>') + '</section>';
       body += '<section class="card sset"><h2>PIN rodzica</h2><p class="small muted">PIN chroni panel rodzica, gdy dziecko ćwiczy na Twoim urządzeniu (przycisk „Zakończ naukę” wymaga wtedy PIN-u).</p>' + '<div class="row"><input id="newpin" class="inp" style="max-width:200px;font-size:18px" inputmode="numeric" maxlength="8" placeholder="nowy PIN"><button class="btn sm" data-act="setpin">' + (IDX.pin ? 'Zmień PIN' : 'Ustaw PIN') + '</button>' + (IDX.pin ? '<button class="btn sm ghost" data-act="delpin">Usuń PIN</button>' : '') + '</div>' + '</section>';
-      body += '<section class="card sset"><h2>Prywatność</h2><p>Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar, zainteresowania i postępy w nauce. Bez reklam, bez śledzenia, bez danych osobowych.</p></section>';
+      body += '<section class="card sset"><h2>Prywatność</h2><p>Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar, zainteresowania, imiona bliskich osób do zadań (jeśli je wpiszecie – bez nazwisk) i postępy w nauce. Bez reklam, bez śledzenia, bez danych osobowych.</p></section>';
       body += aboutHTML();
     } else {
       const pr = IDX.profiles.find(x => x.id === tab); if (!pr) { view.tab = 'og'; return vPSettings(); }
       ensureDraft();
       body = '<div class="row" style="gap:12px;flex-wrap:nowrap;margin-bottom:6px">' + MP.avatar.svg(pr.av, 52) + '<div><h1 style="margin:0">' + esc(pr.name) + '</h1><div class="muted small">Ustawienia tego dziecka</div></div><span style="flex:1"></span><button class="btn sm" data-pkid="' + pr.id + '">Zobacz postępy →</button></div>';
-      body += '<section class="card sset"><h2>Profil</h2>' + nameBlock() + '<h3 style="margin-top:16px">Klasa</h3><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '<h3 style="margin-top:16px">Awatar</h3>' + avatarBlock() + '<h3 style="margin-top:16px">Pomocnik</h3>' + helperBlock() + '<h3 style="margin-top:16px">Zainteresowania</h3><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p><div class="bar2"><button class="btn pri" data-act="saveprof">Zapisz profil</button></div></section>';
+      body += '<section class="card sset"><h2>Profil</h2>' + nameBlock() + '<h3 style="margin-top:16px">Klasa</h3><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '<h3 style="margin-top:16px">Awatar</h3>' + avatarBlock() + '<h3 style="margin-top:16px">Pomocnik</h3>' + helperBlock() + '<h3 style="margin-top:16px">Zainteresowania</h3><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p><h3 style="margin-top:16px">Bliskie osoby w zadaniach</h3>' + peopleBlock() + '<div class="bar2"><button class="btn pri" data-act="saveprof">Zapisz profil</button></div></section>';
       if (MP.store.who()) body += '<section class="card sset" id="sec-login"><h2>Logowanie dziecka</h2>' + (pr.email && linkOpen !== pr.id ? '<div class="srow"><div class="st">Konto Google: ' + esc(pr.email) + '<small>' + esc(pr.name) + ' loguje się samo: „Jestem uczniem” → „Zaloguj się jako uczeń”.</small></div><button class="btn sm" data-plink="' + pr.id + '">Zmień</button><button class="btn sm ghost" data-punlink="' + pr.id + '">Odłącz</button></div>' : (linkOpen === pr.id || !pr.email ? linkForm(pr) : '')) + (linkDone === pr.id ? '<div class="fb ok" role="status"><b>Konto dziecka zostało połączone. Może już zalogować się do aplikacji.</b></div>' : '') + '</section>';
       body += kidSettingsLearnHTML();
       body += '<section class="card sset dzone"><h2>Usuwanie</h2><div class="srow"><div class="st">Usuń konto dziecka<small>Usuwa profil, wszystkie postępy' + (pr.email ? ' i połączenie z kontem Google' : '') + '. Tego nie da się cofnąć.</small></div><button class="btn sm danger" data-pdel="' + pr.id + '">Usuń konto</button></div></section>';
@@ -7830,7 +8094,7 @@ var MP = window.MP;
   }
 
   // ---------- PROFIL: imię, awatar, zainteresowania ----------
-  function ensureDraft() { if (!draft) { const P = (view.name === 'onboard' && view.isNew) || !S ? {} : (S.profile || {}); draft = { name: P.name || '', grade: P.grade || null, av: Object.assign({}, MP.avatar.DEF, P.av || MP.avatar.random()), interests: (P.interests || []).slice(), helper: MP.helpers.id(P.helper) }; } return draft; }
+  function ensureDraft() { if (!draft) { const P = (view.name === 'onboard' && view.isNew) || !S ? {} : (S.profile || {}); draft = { name: P.name || '', grade: P.grade || null, av: Object.assign({}, MP.avatar.DEF, P.av || MP.avatar.random()), interests: (P.interests || []).slice(), helper: MP.helpers.id(P.helper), people: (P.people || []).map(x => Object.assign({}, x)) }; } return draft; }
   function nameBlock() { return '<label for="nm" class="small muted">Imię albo ksywka (wystarczy samo imię)</label><input id="nm" class="inp" maxlength="20" autocomplete="off" value="' + esc(draft.name) + '" placeholder="np. Kuba">'; }
   function avatarBlock() {
     const A = MP.avatar, av = draft.av;
@@ -7873,7 +8137,7 @@ var MP = window.MP;
     if (st === 1) h += '<h1>Do której klasy chodzisz' + (draft.name ? ', ' + esc(draft.name) : '') + '?</h1><p class="muted">Dobiorę materiał do Twojej klasy. Zawsze możesz to zmienić w profilu.</p>' + gradeBlock() + '<div class="bar2"><button class="btn" data-ob="0">← Wstecz</button><button class="btn pri" data-ob="2">Dalej →</button></div>';
     if (st === 2) h += '<h1>Zrób swój awatar</h1><p class="muted">Wybierz kolory, fryzurę i dodatki. Zawsze możesz to zmienić później.</p>' + avatarBlock() + '<div class="bar2"><button class="btn" data-ob="1">← Wstecz</button><button class="btn pri" data-ob="3">Dalej →</button></div>';
     if (st === 3) h += '<h1>Wybierz swojego pomocnika</h1><p class="muted">Pomocnik będzie z Tobą w czasie nauki: powie, czy odpowiedź jest dobra, pocieszy, gdy coś nie wyjdzie, i podpowie, gdy poprosisz o wskazówkę. Możesz go później zmienić w ustawieniach.</p>' + helperBlock() + '<div class="bar2"><button class="btn" data-ob="2">← Wstecz</button><button class="btn pri" data-ob="4">Dalej →</button></div>';
-    if (st === 4) h += '<h1>Co Cię interesuje?</h1><p>Zaznacz tyle tematów, ile chcesz (najlepiej co najmniej 3). Zadania z treścią będą o tym, co lubisz – np. o rakietach, rybach albo meczach.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">' + (draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.') + '</p><div class="bar2"><button class="btn" data-ob="3">← Wstecz</button><button class="btn pri" data-ob="done">Gotowe – zaczynamy!</button></div>';
+    if (st === 4) h += '<h1>Co Cię interesuje?</h1><p>Zaznacz tyle tematów, ile chcesz (najlepiej co najmniej 3). Zadania z treścią będą o tym, co lubisz – np. o rakietach, rybach albo meczach.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">' + (draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.') + '</p>' + peopleBlock(true) + '<div class="bar2"><button class="btn" data-ob="3">← Wstecz</button><button class="btn pri" data-ob="done">Gotowe – zaczynamy!</button></div>';
     return h + '</section></div>';
   }
   function vProfil() {
@@ -7888,6 +8152,7 @@ var MP = window.MP;
       '<section class="card sset"><h2>Imię lub ksywka</h2>' + nameBlock() + '</section>' +
       '<section class="card sset"><h2>Mój pomocnik</h2><p class="muted small">Pomocnik mówi Ci, czy odpowiedź jest dobra, i podpowiada. Wybór zapisuje się od razu.</p>' + helperBlock() + '</section>' +
       '<section class="card sset"><h2>Zainteresowania</h2><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p></section>' +
+      '<section class="card sset"><h2>Bliskie osoby w zadaniach</h2>' + peopleBlock() + '</section>' +
       (local ? '<section class="card sset"><h2>Klasa</h2><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '</section>' : '<section class="card sset"><h2>Klasa</h2><p>' + (MP.GRADES[S.profile.grade] ? MP.GRADES[S.profile.grade].name : '') + '</p><p class="muted small">Klasę zmienia rodzic w swoich ustawieniach.</p></section>') +
       '<div class="bar2" style="margin:0 0 16px"><button class="btn pri" data-act="saveprof">Zapisz zmiany</button><button class="btn" data-act="cancelprof">Anuluj</button></div>' +
       '<section class="card sset"><h2>Konto</h2>' + acct + '</section></div>';
@@ -7897,13 +8162,32 @@ var MP = window.MP;
     const nm = document.getElementById('nm');
     if (nm) { nm.addEventListener('input', () => { draft.name = nm.value; }); nm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && view.name === 'onboard') { e.preventDefault(); obGo('1'); } }); if (view.name === 'onboard') nm.focus(); }
   }
+  // bliskie osoby: tylko imiona/ksywki (bez nazwisk), do zadań z treścią
+  const ROLEW = /^(pies|piesek|kot|kotek|chomik|świnka|królik|papuga|rybka|konik|żółw|ciocia|ciotka|wujek|babcia|dziadek|brat|siostra|kuzyn|kuzynka|pani|pan|mama|tata)$/i;
+  function cleanPerson(raw) {
+    const t = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (!t) return { err: 'Wpisz imię.' };
+    if (t.length > 20 || /[0-9@#$%&*+=_/\\<>"]/.test(t)) return { err: 'Wpisz samo imię lub ksywkę – bez nazwiska, cyfr i znaków.' };
+    if (!/^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż' -]+$/.test(t)) return { err: 'Imię może mieć tylko litery.' };
+    const w = t.split(' ');
+    if (w.length > 2 || (w.length === 2 && !ROLEW.test(w[0]))) return { err: 'Wystarczy samo imię, bez nazwiska (można np. „babcia Ela” albo „pies Burek”).' };
+    const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+    return { n: w.length === 2 ? w[0].toLowerCase() + ' ' + cap(w[1]) : cap(t) }; // „babcia Ela” – wielka litera na początku zdania dodaje generator
+  }
+  function peopleBlock(onb) {
+    const P = draft.people || (draft.people = []);
+    return (onb ? '<h2 style="margin-top:18px">Kogo lubisz? <span class="small muted" style="font-weight:400">(nieobowiązkowe)</span></h2>' : '') +
+      '<p class="muted small">' + (onb ? 'Wpisz imiona bliskich osób – rodzeństwa, przyjaciół, a nawet zwierzaka. Czasem pojawią się w zadaniach z treścią.' : 'Imiona bliskich osób czasem pojawiają się w zadaniach z treścią (zawsze w miłych sytuacjach).') + ' Tylko imię lub ksywka, bez nazwisk.</p>' +
+      '<div class="ppl">' + P.map((x, i) => '<span class="pchip">' + esc(x.n) + ' <small>(' + (x.g === 'f' ? 'ona' : 'on') + ')</small><button type="button" data-pdelp="' + i + '" aria-label="Usuń ' + esc(x.n) + '">×</button></span>').join('') + '</div>' +
+      (P.length < 8 ? '<div class="row" style="margin-top:8px"><input id="pnm" class="inp" maxlength="20" autocomplete="off" placeholder="np. Kuba, babcia Ela" style="flex:1;min-width:160px"><button type="button" class="btn sm" data-padd="m">+ on</button><button type="button" class="btn sm" data-padd="f">+ ona</button></div>' : '<p class="small muted">To już 8 osób – wystarczy.</p>');
+  }
   function cleanName(n) { return String(n || '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20); }
   function obGo(to) {
     if (to === '1' && !cleanName(draft.name)) { toast('Wpisz imię albo ksywkę – wystarczy jedno słowo.'); return; }
     if (to === '2' && !draft.grade) { toast('Wybierz klasę.'); return; }
     if (to === 'done') {
       if (!draft.interests.length) { toast('Wybierz przynajmniej jeden temat.'); return; }
-      const prof = { name: cleanName(draft.name), grade: +draft.grade, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper) };
+      const prof = { name: cleanName(draft.name), grade: +draft.grade, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper), people: (draft.people || []).slice() };
       if (view.isNew || !S) {
         const id = MP.store.newId();
         IDX.profiles.push(Object.assign({ id, created: now(), updated: now() }, prof)); MP.store.saveIndex(IDX);
@@ -7923,7 +8207,7 @@ var MP = window.MP;
     if (e.target.id === 'prepform') {
       const tps = [...e.target.querySelectorAll('input[name=t]:checked')].map(x => x.value);
       if (!tps.length) return toast('Zaznacz przynajmniej jeden temat.');
-      const specs = E.prepCreate(S, tps, now()); S.prep.diagSpecs = specs; save(); render();
+      const specs = E.prepCreate(S, tps, now()); S.prep.diagSpecs = specs; const dt = document.getElementById('pdate'); if (dt && dt.value) { S.prep.date = dt.value; } save(); render();
     }
     if (e.target.id === 'linkform') {
       const id = e.target.dataset.id, p = IDX.profiles.find(x => x.id === id), msg = document.getElementById('lemmsg');
@@ -7946,6 +8230,7 @@ var MP = window.MP;
   });
   $app.addEventListener('change', (e) => {
     if (e.target.id === 'slen') { S.settings.seriesLen = +e.target.value; save(); }
+    if (e.target.id === 'sgames') { S.settings.games = !!e.target.checked; save(); }
     if (e.target.classList && e.target.classList.contains('alldz')) { const dd = e.target.closest('details'); dd.open = true; dd.querySelectorAll('input[name=t]').forEach(x => { x.checked = e.target.checked; }); }
     if (e.target.id === 'sgrade') { S.settings.showGrade = e.target.checked; save(); }
     if (e.target.id === 'tl' && S.prep) { S.prep.timeLimit = +e.target.value; save(); }
@@ -7985,12 +8270,15 @@ var MP = window.MP;
     if (d.helper) { draft.helper = d.helper; if (view.name === 'profil' && S && S.profile) { S.profile.helper = d.helper; save(); toast('Twój pomocnik: ' + esc(MP.helpers.C[d.helper].name) + ' 👋', 2000); } return rerenderProfile(); }
     if (d.int) { const i = draft.interests.indexOf(d.int); if (i >= 0) draft.interests.splice(i, 1); else draft.interests.push(d.int); b.setAttribute('aria-pressed', i < 0); const m = document.getElementById('intmsg'); if (m) m.textContent = draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.'; return; }
     if (d.act === 'avrand') { draft.av = MP.avatar.random(); return rerenderProfile(); }
-    if (d.act === 'saveprof') { if (!cleanName(draft.name)) return toast('Wpisz imię.'); if (!draft.interests.length) return toast('Wybierz przynajmniej jeden temat.'); S.profile = { name: cleanName(draft.name), grade: +draft.grade || S.profile.grade || 6, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper) }; draft = null; applyProfile(); save(); toast('Zapisano.'); return render(); }
+    if (d.act === 'saveprof') { if (!cleanName(draft.name)) return toast('Wpisz imię.'); if (!draft.interests.length) return toast('Wybierz przynajmniej jeden temat.'); S.profile = { name: cleanName(draft.name), grade: +draft.grade || S.profile.grade || 6, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper), people: (draft.people || []).slice() }; draft = null; applyProfile(); save(); toast('Zapisano.'); return render(); }
     if (d.act === 'cancelprof') { draft = null; return go('start'); }
+    if (d.padd) { const inp = document.getElementById('pnm'); const c = cleanPerson(inp && inp.value); if (c.err) { toast(c.err); return; } ensureDraft(); draft.people = draft.people || []; if (draft.people.some(x => x.n.toLowerCase() === c.n.toLowerCase())) { toast('To imię już jest na liście.'); return; } draft.people.push({ n: c.n, g: d.padd === 'f' ? 'f' : 'm' }); rerenderProfile(); const ni = document.getElementById('pnm'); if (ni) ni.focus(); return; }
+    if (d.pdelp !== undefined) { ensureDraft(); (draft.people || []).splice(+d.pdelp, 1); return rerenderProfile(); }
     if (d.go2) return go(d.go2);
     if (d.dzial) return go('dzial', { id: d.dzial });
     if (d.topicgo || d.topic) return go('topic', { id: d.topicgo || d.topic });
     if (d.learn) { const sid = d.learn; return d.mode === 'review' ? startLesson({ mode: 'review', skills: [sid] }, view.name) : startLesson({ mode: 'learn', skill: sid }, view.name); }
+    if (d.ptiles) { d.ptiles.split(',').forEach(id => { const x = $app.querySelector('#prepform input[name=t][value="' + id + '"]'); if (x) { x.checked = true; const det = x.closest('details'); if (det) det.open = true; } }); return; }
     if (d.preplearn) return startLesson({ mode: 'prep', skill: d.preplearn, prepId: S.prep.id }, 'sprawdzian');
     if (d.examres !== undefined) return go('examres', { idx: +d.examres });
     // (stare przyciski znaków zastąpione klawiaturą matematyczną – mathinput.js)
@@ -8018,15 +8306,18 @@ var MP = window.MP;
     if (act === 'exstep') { const ex = b.closest('.ex'); const hid = ex.querySelector('li.hid'); if (hid) hid.classList.remove('hid'); if (!ex.querySelector('li.hid')) b.remove(); return; }
     if (act === 'check') { const tp = MP.TOPICS[d.topicId]; const ids = tp.skills.filter(MP.isReady); return startLesson({ mode: 'check', skills: ids, max: Math.max(5, Math.min(8, ids.length * 2)) }, 'dzialy'); }
     if (act === 'cardnext') { advance(); save(); return rerenderLesson(); }
+    if (act === 'game') { view = { name: 'game', from: view.from, sum: view.sum, back: view }; render(); window.scrollTo(0, 0); return; }
+    if (act === 'nogame') { if (view.sum) view.sum.gameDone = true; return render(); }
+    if (act === 'gamedemo') { view = { name: 'game', back: view }; render(); window.scrollTo(0, 0); return; }
     if (act === 'next') { advance(); save(); if (view.name === 'summary') return render(); return rerenderLesson(); }
     if (act === 'checkans') return onCheck();
     if (act === 'hint') { const c = S.session.cur; const it = curItem(); if (it.type === 'input' || it.type === 'fill' || it.type === 'multi' || it.type === 'match') c.resp = readResp(it); c.hints++; save(); return rerenderLesson(); }
     if (act === 'showsol' || act === 'dontknow') {
       const c = S.session.cur; const it = curItem();
       if (act === 'dontknow' && !c.attempts) { const rec = E.record(S, { skill: c.spec.skill, d: c.spec.d, type: it.type, hints: 3, attempt: 1, sec: Math.round((now() - c.tl) / 1000), mode: S.session.mode, solShown: true }, { ok: false, code: 'unknown' }, now()); E.afterAnswer(S, c.spec, rec, now()); noteResult(c, '—'); c.attempts = 1; }
-      if (act === 'dontknow') { const wasDone = c.done; c.done = true; c.wrongNow = false; if (!wasDone && !S.session.fixed && !c.spec.analog) E.queueAnalog(S, c.spec);
-        const corr = correctLabel(it); c.fb = '<div class="fb info">' + (S.session.fixed ? 'Nic nie szkodzi – zapisane.' : 'Nic nie szkodzi. ' + (corr ? 'Poprawna odpowiedź: <b>' + corr + '</b>. ' : '') + 'Zobacz rozwiązanie poniżej – następne zadanie będzie podobne.') + '</div>'; }
-      c.solShown = !S.session.fixed || act === 'showsol';
+      if (act === 'dontknow') { const wasDone = c.done; c.done = true; c.wrongNow = false; if (!wasDone && !isTestSess(S.session) && !c.spec.analog) E.queueAnalog(S, c.spec);
+        const corr = correctLabel(it); c.fb = '<div class="fb info">' + (isTestSess(S.session) ? 'Nic nie szkodzi – zapisane.' : 'Nic nie szkodzi. ' + (corr ? 'Poprawna odpowiedź: <b>' + corr + '</b>. ' : '') + 'Zobacz rozwiązanie poniżej – następne zadanie będzie podobne.') + '</div>'; }
+      c.solShown = !isTestSess(S.session) || act === 'showsol';
       save(); return rerenderLesson();
     }
     if (act === 'pause') {

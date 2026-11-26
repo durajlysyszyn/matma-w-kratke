@@ -101,8 +101,8 @@ var MP = window.MP;
           idx.profiles.push({ id, name: P.name, av: P.av, grade: P.grade, created: old.created || Date.now(), updated: Date.now() });
           if (old.settings && old.settings.pin) idx.pin = old.settings.pin;
           lset(KEY_P(id), old); idx.last = id; ldel(OLD);
-        }
-        idx.updated = Date.now(); lset(KEY_I, idx);
+          idx.updated = Date.now(); lset(KEY_I, idx); // zapisujemy tylko po migracji – pusty indeks nie zostaje w przeglądarce (np. po wylogowaniu)
+        } else idx.updated = 0;
       }
       return idx;
     },

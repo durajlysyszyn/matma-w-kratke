@@ -302,6 +302,18 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP = (typeof wind
     return '<svg viewBox="0 0 ' + Math.max(60, x) + ' ' + H + '" class="vis money" role="img" aria-label="' + list.map(m => m.v + ' ' + m.u).join(', ') + '" style="max-width:' + Math.min(100, Math.max(30, x / 6)) + '%">' + out + '</svg>';
   }
   MP.moneySvg = moneySvg;
+  // imię do zadania z treścią: czasem osoba wpisana przez dziecko/rodzica (MP.people), inaczej z listy gotowych imion.
+  // Bez wpisanych osób losowanie jest identyczne jak wcześniej (te same zadania z tych samych ziaren).
+  MP.people = [];
+  MP.pickKid = (r, list, exclude) => {
+    const ppl = (MP.people || []).filter(p => p && p.n && p.n !== exclude);
+    if (ppl.length && r.chance(0.6)) { const p = r.pick(ppl); return [p.n, p.g === 'f' ? 'f' : 'm']; }
+    const l = exclude ? list.filter(k => k[0] !== exclude) : list; return r.pick(l);
+  };
+  // rozkład kwoty na najmniejszą liczbę monet (zł: 5, 2, 1; gr: 50, 20, 10, 5, 2, 1) – do rysunku
+  MP.moneyList = (zl, gr) => { const out = []; let z = zl || 0, g = gr || 0;
+    [5, 2, 1].forEach(v => { while (z >= v) { out.push({ v, u: 'zł' }); z -= v; } });
+    [50, 20, 10, 5, 2, 1].forEach(v => { while (g >= v) { out.push({ v, u: 'gr' }); g -= v; } }); return out; };
   MP.util = { rng, gcd, lcm, F, red, add, sub, mul, div, eq, val, isSimplest, fromDec, fracM, fmtF, fmtImp, fmtDec, fmtDecK, fmtNum, plain, parseNum, pl, money };
   MP.items = { check, checkNum, asInput, asChoice, asError, asWhy, build };
 })(MP);

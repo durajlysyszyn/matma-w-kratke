@@ -151,7 +151,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const wrong = [{ v: N(s + 1), code: 'calc' }, { v: N(s - 1), code: 'calc' }];
       if (carry) wrong.unshift({ v: N(noCarry(a, b)), code: 'k2_carry' });
       const toTen = 10 - a % 10;
-      return { prompt: 'Oblicz: ' + a + ' + ' + b, value: N(s), wrong,
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, false) : null;
+      return { prompt: story || 'Oblicz: ' + a + ' + ' + b, value: N(s), wrong,
         errorVersion: carry ? { steps: ['Jedności: ' + a % 10 + ' + ' + b % 10 + ' = ' + (a % 10 + b % 10) + ', piszę ' + (a % 10 + b % 10) % 10, 'Dziesiątki: ' + Math.floor(a / 10) + ' + ' + Math.floor(b / 10) + ' = ' + (Math.floor(a / 10) + Math.floor(b / 10)), 'Wynik: ' + noCarry(a, b)], wrongIdx: 1, code: 'k2_carry', why: 'Z jedności zrobiła się jeszcze jedna dziesiątka – trzeba ją dodać do dziesiątek.', intro: 'Kuba liczył i wyszło mu ' + noCarry(a, b) + '. Gdzie się pomylił?' } : null,
         hints: carry ? ['Dopełnij do pełnej dziesiątki.', b < 10 ? a + ' + ' + toTen + ' = ' + (a + toTen) + '. Zostaje jeszcze ' + (b - toTen) + '.' : 'Najpierw dodaj dziesiątki: ' + a + ' + ' + Math.floor(b / 10) * 10 + ' = ' + (a + Math.floor(b / 10) * 10) + '.', b < 10 ? (a + toTen) + ' + ' + (b - toTen) + ' = ?' : 'Teraz dodaj jedności: ' + (a + Math.floor(b / 10) * 10) + ' + ' + b % 10 + '.']
           : ['Dodaj osobno dziesiątki i jedności.', 'Dziesiątki: ' + Math.floor(a / 10) + ' + ' + Math.floor(b / 10) + ', jedności: ' + a % 10 + ' + ' + b % 10 + '.', 'Połącz wynik.'],
@@ -173,7 +174,8 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
       const wrong = [{ v: N(v + 1), code: 'calc' }, { v: N(a + b), code: 'op_confuse' }];
       if (borrow) wrong.unshift({ v: N(flip), code: 'k2_borrow' }, { v: N(v + 10), code: 'k2_borrow' });
       const down = a % 10;
-      return { prompt: 'Oblicz: ' + a + ' − ' + b, value: N(v), wrong,
+      const story = d < 3 && MP.storyAS ? MP.storyAS(r, a, b, true) : null;
+      return { prompt: story || 'Oblicz: ' + a + ' − ' + b, value: N(v), wrong,
         errorVersion: borrow ? { steps: ['Jedności: ' + b % 10 + ' − ' + a % 10 + ' = ' + Math.abs(a % 10 - b % 10), 'Dziesiątki: ' + Math.floor(a / 10) + ' − ' + Math.floor(b / 10) + ' = ' + (Math.floor(a / 10) - Math.floor(b / 10)), 'Wynik: ' + flip], wrongIdx: 0, code: 'k2_borrow', why: 'Nie wolno odwracać odejmowania! Z ' + a % 10 + ' nie odejmiesz ' + b % 10 + ' – trzeba „rozmienić" jedną dziesiątkę.', intro: 'Ola liczyła i wyszło jej ' + flip + '. Gdzie się pomyliła?' } : null,
         hints: borrow ? ['Odejmuj „do pełnej dziesiątki".', b < 10 ? a + ' − ' + down + ' = ' + (a - down) + '. Musisz odjąć jeszcze ' + (b - down) + '.' : 'Najpierw odejmij dziesiątki: ' + a + ' − ' + Math.floor(b / 10) * 10 + ' = ' + (a - Math.floor(b / 10) * 10) + '.', b < 10 ? (a - down) + ' − ' + (b - down) + ' = ?' : 'Teraz odejmij jedności: ' + (a - Math.floor(b / 10) * 10) + ' − ' + b % 10 + '.']
           : ['Odejmij osobno dziesiątki i jedności.', 'Dziesiątki: ' + Math.floor(a / 10) + ' − ' + Math.floor(b / 10) + ', jedności: ' + a % 10 + ' − ' + b % 10 + '.', 'Sprawdź dodawaniem: wynik + ' + b + ' powinno dać ' + a + '.'],
@@ -238,16 +240,18 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią', grade: 2, mainCode: 'read', prereq: ['k2_add', 'k2_sub'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const th = MP.th(), T = th.k2t || MP.THEMES.szkola.k2t, [nm, g] = r.pick(KIDS);
-      const t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      // liczby losujemy najpierw, potem historyjkę: różne przedmioty z zainteresowań i różne sytuacje (MP.wordAS)
       const op = d === 3 ? r.pick(['mul', 'div']) : r.pick(['add', 'sub']);
-      if (op === 'add') { const a = d === 1 ? r.int(5, 30) : r.int(15, 60), b = d === 1 ? r.int(2, 9) : r.int(11, 35); const s = a + b;
-        return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dostał', 'Dostała') + ' jeszcze ' + t(b) + '. Ile ' + T[2] + ' ma teraz?', value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: ['Czy ' + vg(g, 'ma', 'ma') + ' teraz więcej, czy mniej? Więcej – więc dodajemy.', 'Działanie: ' + a + ' + ' + b + '.', 'Policz ' + a + ' + ' + b + '.'], sol: [a + ' + ' + b + ' = ' + s, 'Odpowiedź: ' + nm + ' ma ' + t(s) + '.'] }; }
-      if (op === 'sub') { const a = d === 1 ? r.int(12, 30) : r.int(35, 90), b = d === 1 ? r.int(2, 9) : r.int(11, a - 10); const v = a - b;
-        return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dał', 'Dała') + ' koledze ' + t(b) + '. Ile ' + T[2] + ' ' + vg(g, 'mu', 'jej') + ' zostało?', value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: ['Czy zostało więcej, czy mniej niż było? Mniej – więc odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, 'Odpowiedź: zostało ' + t(v) + '.'] }; }
+      const Od = (x) => 'Odpowiedź: ' + x.ans;
+      if (op === 'add') { const a = d === 1 ? r.int(5, 30) : r.int(15, 60), b = d === 1 ? r.int(2, 9) : r.int(11, 35); const s = a + b; const x = MP.wordAS(r, a, b, 'add');
+        return { prompt: x.prompt, value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' + ' + b + '.', 'Policz ' + a + ' + ' + b + '.'], sol: [a + ' + ' + b + ' = ' + s, Od(x)] }; }
+      if (op === 'sub') { const a = d === 1 ? r.int(12, 30) : r.int(35, 90), b = d === 1 ? r.int(2, 9) : r.int(11, a - 10); const v = a - b; const x = MP.wordAS(r, a, b, 'sub');
+        return { prompt: x.prompt, value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, Od(x)] }; }
       let a, b; do { a = r.int(2, 9); b = r.int(2, 9); } while (a * b > 50);
-      if (op === 'mul') return { prompt: 'W każdym z ' + a + ' pudełek jest po ' + t(b) + '. Ile ' + T[2] + ' jest we wszystkich pudełkach?', value: N(a * b), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(a * b - b), code: 'calc' }], hints: ['Każde pudełko ma tyle samo – to mnożenie.', 'Działanie: ' + a + ' · ' + b + '.', Array(a).fill(b).join(' + ') + ' = ?'], sol: [a + ' · ' + b + ' = ' + a * b, 'Odpowiedź: razem ' + t(a * b) + '.'] };
-      return { prompt: nm + ' ' + vg(g, 'rozdzielił', 'rozdzieliła') + ' ' + t(a * b) + ' po równo między ' + b + ' ' + pl(b, 'dziecko', 'dzieci', 'dzieci') + '. Ile ' + T[2] + ' dostało każde dziecko?', value: N(a), wrong: [{ v: N(a * b - b), code: 'op_confuse' }, { v: N(a * b + b), code: 'op_confuse' }], hints: ['Dzielimy po równo – to dzielenie.', 'Działanie: ' + a * b + ' : ' + b + '.', 'Jaka liczba razy ' + b + ' daje ' + a * b + '?'], sol: [a * b + ' : ' + b + ' = ' + a, 'Odpowiedź: każde dziecko dostało ' + t(a) + '.'] };
+      if (op === 'mul') { const x = MP.wordAS(r, a, b, 'mul');
+        return { prompt: x.prompt, value: N(a * b), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(a * b - b), code: 'calc' }], hints: [x.h, 'Działanie: ' + a + ' · ' + b + '.', Array(a).fill(b).join(' + ') + ' = ?'], sol: [a + ' · ' + b + ' = ' + a * b, Od(x)] }; }
+      const x = MP.wordAS(r, a, b, 'div');
+      return { prompt: x.prompt, value: N(a), wrong: [{ v: N(a * b - b), code: 'op_confuse' }, { v: N(a * b + b), code: 'op_confuse' }], hints: [x.h, 'Działanie: ' + a * b + ' : ' + b + '.', 'Jaka liczba razy ' + b + ' daje ' + a * b + '?'], sol: [a * b + ' : ' + b + ' = ' + a, Od(x)] };
     }
   });
 
@@ -258,10 +262,10 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     gen(r, d) {
       if (d === 1) { const coins = Array.from({ length: r.int(3, 4) }, () => r.pick([1, 2, 5])); const s = coins.reduce((a, b) => a + b, 0);
         return { visual: MP.moneySvg(coins.map(v => ({ v, u: 'zł' }))), prompt: 'W skarbonce są monety: ' + coins.map(c => c + ' zł').join(', ') + '. Ile to razem złotych?', value: N(s), wrong: [{ v: N(coins.length), code: 'read' }, { v: N(s - 1), code: 'calc' }], hints: ['Dodaj wartości wszystkich monet.', 'Zacznij od największych.', coins.join(' + ') + ' = ?'], sol: [coins.join(' + ') + ' = ' + s + ' zł'] }; }
-      if (d === 2) { const T = (MP.th().k2t) || MP.THEMES.szkola.k2t; const pay = r.pick([10, 20, 50]), price = r.int(2, pay - 2);
+      if (d === 2) { const T = MP.k2noun(r, true); const pay = r.pick([10, 20, 50]), price = r.int(2, pay - 2);
         return { visual: MP.moneySvg([{ v: pay, u: 'zł' }]), prompt: 'Kupujesz ' + T[0] + ' za ' + price + ' zł. Płacisz banknotem ' + pay + ' zł. Ile dostaniesz reszty?', value: N(pay - price), wrong: [{ v: N(pay + price), code: 'op_confuse' }, { v: N(price), code: 'read' }], hints: ['Reszta to to, co zostaje z banknotu po zapłaceniu.', 'Działanie: ' + pay + ' − ' + price + '.', 'Sprawdź: ' + price + ' + reszta = ' + pay + '.'], sol: [pay + ' − ' + price + ' = ' + (pay - price) + ' zł'] }; }
       const z = r.int(1, 5), g = r.pick([0, 20, 50, 70, 10]);
-      return { prompt: z + ' zł ' + (g ? g + ' gr ' : '') + '= □ gr', fill: true, value: N(z * 100 + g), wrong: [{ v: N(z * 10 + g), code: 'k2_zlgr' }, { v: N(z + g), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', g ? 'Dodaj jeszcze ' + g + ' gr.' : 'To już wszystko.'], sol: [z + ' zł = ' + z * 100 + ' gr', (g ? z * 100 + ' + ' + g + ' = ' : '') + (z * 100 + g) + ' gr'] };
+      return { visual: MP.moneySvg(Array.from({ length: z }, () => ({ v: 1, u: 'zł' })).concat(MP.moneyList(0, g))), prompt: z + ' zł ' + (g ? g + ' gr ' : '') + '= □ gr', fill: true, value: N(z * 100 + g), wrong: [{ v: N(z * 10 + g), code: 'k2_zlgr' }, { v: N(z + g), code: 'k2_zlgr' }], hints: ['1 zł = 100 gr.', z + ' zł = ' + z * 100 + ' gr.', g ? 'Dodaj jeszcze ' + g + ' gr.' : 'To już wszystko.'], sol: [z + ' zł = ' + z * 100 + ' gr', (g ? z * 100 + ' + ' + g + ' = ' : '') + (z * 100 + g) + ' gr'] };
     }
   });
 

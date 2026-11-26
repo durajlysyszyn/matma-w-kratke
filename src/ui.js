@@ -17,7 +17,7 @@
   }
   let PEND = null, DIRTY = false; // zapis dziecka jest właśnie pobierany z konta – do tego czasu nie nadpisujemy konta starszym/pustym stanem
   const save = () => { if (S && CID) { if (PEND === CID) { DIRTY = true; MP.store.saveLocal(S, CID); } else MP.store.save(S, CID); syncIdxEntry(); } };
-  const applyProfile = () => { MP.interests = (S && S.profile && S.profile.interests) || []; MP.setGrade((S && S.profile && S.profile.grade) || 6); };
+  const applyProfile = () => { MP.interests = (S && S.profile && S.profile.interests) || []; MP.people = (S && S.profile && S.profile.people) || []; MP.setGrade((S && S.profile && S.profile.grade) || 6); };
   function activate(id, quiet) {
     const e = IDX.profiles.find(p => p.id === id); if (!e) return false;
     CID = id; S = MP.store.loadProfile(id);
@@ -176,6 +176,7 @@
     else if (v === 'topic') $app.innerHTML = vTopic(view.id);
     else if (v === 'lesson') { $app.innerHTML = vLesson(); afterLessonRender(); }
     else if (v === 'summary') $app.innerHTML = vSummary();
+    else if (v === 'game') { $app.innerHTML = vGame(); afterGameRender(); }
     else if (v === 'locked') $app.innerHTML = vLocked();
     else if (v === 'sprawdzian') $app.innerHTML = vPrep();
     else if (v === 'exam') { $app.innerHTML = vExam(); afterExamRender(); }
@@ -361,9 +362,40 @@
     if (mode === 'diag' && S.prep) { E.prepMakePlan(S, sum.results); }
     if (mode === 'prep' && S.prep) E.prepAfterSession(S, sum);
     if (mode === 'check' && S.prep && s.prepCheck) { S.prep.checks.push({ t: now(), pct: Math.round(sum.ok / Math.max(1, sum.n) * 100) }); }
+    sum.game = gameOffer(sum, mode);
     save(); sum.badges = badgesCheck(true).map(b => b.name);
     view = { name: 'summary', from: view.from, sum };
   }
+  // minigra jako nagroda: po opanowaniu całego tematu albo zaliczeniu testu działu (rodzic może wyłączyć)
+  function gameOffer(sum, mode) {
+    if (!S.settings || S.settings.games === false || !MP.games) return null;
+    if (mode === 'chtest') return sum.ch && sum.ch.pass ? { why: 'Dział zaliczony' } : null;
+    if (!['learn', 'prep', 'review', 'mixed', 'repair'].includes(mode)) return null;
+    const ok = (id) => { const x = S.skills[id] || {}; return (x.lvl || 0) >= 4 || !!x.mastery || !!x.l4At; };
+    for (const id of Object.keys(sum.levels || {})) { const l = sum.levels[id]; if (!(l.to >= 4 && l.from < 4)) continue;
+      const tp = topicOf(id); if (!tp) continue; const sk = tp.skills.filter(MP.isReady);
+      if (sk.length && sk.every(ok)) return { why: 'Temat opanowany', topic: tp.name }; }
+    return null;
+  }
+  function vGame() { return '<div class="lesson"><section class="bigcard" id="gamebox"></section></div>'; }
+  function afterGameRender() {
+    const box = document.getElementById('gamebox'); if (!box) return;
+    const g = S.games || (S.games = { n: 0, best: {} }); const def = MP.games.pick(MP.grade);
+    MP.games.mount(box, def, { grade: MP.grade, best: g.best[def.id] || 0, onEnd: (r) => {
+      if (!r.skipped) { g.n = (g.n || 0) + 1; g.best[r.gid] = Math.max(g.best[r.gid] || 0, r.score); }
+      if (view.sum) view.sum.gameDone = true; save();
+      const back = view.back || { name: 'start' }; view = back; render(); window.scrollTo(0, 0); } });
+  }
+  // przykład do karty wyjaśnienia: łatwy, ale nie „pusty” (np. bez porównania 1 □ 1 i z co najmniej 2 krokami, jeśli się da)
+  function exItem(skill) {
+    let best = null;
+    for (let k = 0; k < 10; k++) { let it; try { it = E.buildItem(E.makeSpec(skill, 1, (SK[skill].types[1] || ['input'])[0])); } catch (e) { continue; }
+      const t = U.plain(it.prompt).replace(/<[^>]+>/g, ' ');
+      const dull = /(^|[^\d,])(\d+(?:,\d+)?)\s*□\s*\2(?![\d,])/.test(t) || (it.answer && it.answer.kind === 'num' && it.answer.value && it.answer.value.n === 0);
+      if (!dull && it.sol && it.sol.length > 1) return it; if (!dull && !best) best = it; }
+    return best;
+  }
+  const isTestSess = (s) => !!(s && (s.fixed || s.mode === 'check')); // testy: bez informacji „dobrze/źle” w trakcie
   function curItem() { const c = S.session && S.session.cur; if (!c || !c.spec) return null; if (!c._item) Object.defineProperty(c, '_item', { value: E.buildItem(c.spec), enumerable: false, writable: true }); return c._item; }
   function modeTag(s, spec) {
     if (spec && spec.analog) return 'Podobne zadanie – spróbuj jeszcze raz';
@@ -414,21 +446,23 @@
   }
   function answerWidget(it, c, examMode, examVal) {
     const disabled = !examMode && c && c.done ? ' disabled' : '';
+    const fx = !examMode && isTestSess(S.session); // w testach: bez zieleni/czerwieni – wynik dopiero na końcu
     const val = examMode ? examVal : (c ? (c.draft != null && !c.done ? c.draft : c.resp) : null);
     if (it.type === 'input' || it.type === 'fill') {
-      const stt = !examMode && c ? (c.done ? (c.ok ? 'ok' : 'shown') : (c.wrongNow ? 'no' : '')) : '';
+      const stt = !examMode && c && !fx ? (c.done ? (c.ok ? 'ok' : 'shown') : (c.wrongNow ? 'no' : '')) : '';
       return MP.mf.render(val || '', Object.assign({ disabled: !!disabled, unit: it.unit, state: stt }, fieldOpts(it)));
     }
     if (it.type === 'choice' || it.type === 'why' || it.type === 'error') {
       return '<div class="opts">' + it.options.map((o, i) => {
         let cls = 'opt'; if (examMode && +val === i) cls += ' sel';
         if (!examMode && c && !c.done && c.sel === i) cls += ' sel';
-        if (!examMode && c && c.picked) { if (c.picked.includes(i)) cls += i === it.answer.correct ? ' right' : ' wrong'; if (c.done && i === it.answer.correct) cls += ' right'; }
+        if (fx && c && c.picked && c.picked.includes(i)) cls += ' sel';
+        else if (!examMode && c && c.picked) { if (c.picked.includes(i)) cls += i === it.answer.correct ? ' right' : ' wrong'; if (c.done && i === it.answer.correct) cls += ' right'; }
         return '<button class="' + cls + '" data-opt="' + i + '" aria-pressed="' + (!examMode && c ? c.sel === i : +val === i) + '"' + (!examMode && c && (c.done || (c.picked || []).includes(i)) ? ' disabled' : '') + '>' + M(o.label) + '</button>';
       }).join('') + '</div>';
     }
     if (MP.ix.has(it.type)) {
-      const stt = !examMode && c ? (c.done ? (c.ok ? 'ok' : 'shown') : (c.wrongNow ? 'no' : '')) : '';
+      const stt = !examMode && c && !fx ? (c.done ? (c.ok ? 'ok' : 'shown') : (c.wrongNow ? 'no' : '')) : '';
       return MP.ix.render(it, val, { disabled: !!disabled, state: stt });
     }
     if (it.type === 'order') {
@@ -504,7 +538,7 @@
     if (card.card === 'chtest') { const dz = MP.DZIALY.find(x => x.id === card.dz) || { name: '' }; return '<section class="bigcard"><span class="chip">Test działu</span><h1 style="margin-top:10px">' + esc(dz.name) + '</h1><p>Wszystko z tego działu jest już przećwiczone. Teraz krótki test: <b>' + card.n + ' ' + U.pl(card.n, 'zadanie', 'zadania', 'zadań') + '</b> z całego działu, bez wskazówek. Jeśli czegoś nie wiesz, kliknij „Nie wiem”.</p><p>Na końcu zobaczysz swoje odpowiedzi. Po zdanym teście dział jest w pełni zaliczony. A jeśli coś nie wyjdzie, powtórzymy to i spróbujesz jeszcze raz.</p><button class="btn pri" data-act="cardnext">Zaczynam test →</button></section>'; }
     if (card.card === 'diag') return '<section class="bigcard"><h2>Sprawdźmy, gdzie jest kłopot</h2><p>Twoje ostatnie odpowiedzi trudno mi zrozumieć – nie chcę zgadywać, co poszło nie tak. W następnym zadaniu wybierz odpowiedź z kilku. Każda błędna odpowiedź odpowiada innej pomyłce, więc po niej będę wiedział, jak Ci pomóc.</p><button class="btn pri" data-act="cardnext">Dobrze →</button></section>';
     if (card.card === 'repair') {
-      const er = card.code ? MP.err(card.code) : null; const it0 = (() => { try { return E.buildItem(E.makeSpec(card.skill, 1, (SK[card.skill].types[1] || ['input'])[0])); } catch (e) { return null; } })();
+      const er = card.code ? MP.err(card.code) : null; const it0 = exItem(card.skill);
       let h = '<section class="bigcard remed"><span class="chip">Ścieżka naprawcza · runda ' + card.round + '</span><h2 style="margin-top:10px">' + esc(skName(card.skill)) + '</h2>';
       if (card.rkind === 'calc') h += '<p><b>Zasadę rozumiesz</b> – kłopot był w samym liczeniu. Nie wracamy do tłumaczenia. Zrobimy kilka zadań rachunkowych w spokojnym tempie. Rada: zapisuj każdy krok i na końcu sprawdź wynik działaniem odwrotnym.</p>';
       else if (card.rkind === 'read') h += '<p>Kłopot był w <b>czytaniu polecenia</b>. Przy każdym zadaniu: przeczytaj je dwa razy, podkreśl, o co pytają, i na końcu sprawdź, czy odpowiedź pasuje do pytania.</p>';
@@ -530,7 +564,7 @@
       // przykład krok po kroku wygenerowany na nowo (łatwy)
       const exSkill = card.reason === 'probe' ? card.skill : card.skill;
       try {
-        const sp = E.makeSpec(exSkill, 1, (SK[exSkill].types[1] || ['input'])[0]); const ex = E.buildItem(sp);
+        const ex = exItem(exSkill); if (!ex) throw 0;
         h += '<div class="ex"><b>Zobacz na przykładzie:</b><div class="q" style="font-size:18px">' + M(ex.prompt) + '</div>' + (ex.visual || '') + '<ol>' + ex.sol.map((x, j) => '<li class="' + (j ? 'hid' : '') + '">' + M(x) + '</li>').join('') + '</ol>' + (ex.sol.length > 1 ? '<button class="btn sm" data-act="exstep">Pokaż kolejny krok</button>' : '') + '</div>';
       } catch (e) { }
       if (card.remedy) h += '<p>Najpierw krótko przećwiczymy <b>' + esc(skName(card.remedy)) + '</b> – to podstawa tego tematu. Potem wrócimy, zaczynając od łatwiejszych zadań.</p>';
@@ -581,9 +615,8 @@
     const rec = E.record(S, meta, res, t);
     if (c.attempts === 1) { E.afterAnswer(S, c.spec, rec, t); noteResult(c, meta.resp); }
     if (it.writeUp && c.wu && c.wu.trim()) { S.writeups.push({ t, skill: c.spec.skill, prompt: U.plain(it.prompt).replace(/<[^>]+>/g, ' '), text: c.wu.trim().slice(0, 1500), ok: !!res.ok }); if (S.writeups.length > 60) S.writeups.shift(); c.wu = ''; }
-    const fixed = !!s.fixed;
-    if (fixed && (s.mode === 'mastery' || s.mode === 'chtest')) { c.done = true; c.fb = '<div class="fb info">Zapisane. Wynik całego testu zobaczysz na końcu.</div>'; save(); return rerenderLesson(); }
-    if (fixed) { c.done = true; c.fb = '<div class="fb info">Zapisane. ' + (res.ok ? 'Dobrze!' : 'Do tego wrócimy w planie powtórki.') + '</div>'; save(); return rerenderLesson(); }
+    const fixed = isTestSess(s);
+    if (fixed) { c.done = true; c.fb = '<div class="fb info"><b>Zapisane ✓</b>' + (s.step <= 1 || !s.fxNoted ? ' W teście nie pokazuję od razu, czy dobrze – wszystkie odpowiedzi zobaczysz na końcu.' : '') + '</div>'; s.fxNoted = true; save(); return rerenderLesson(); }
     c.wrongNow = !res.ok;
     if (res.ok) {
       c.done = true; c.ok = true;
@@ -645,7 +678,7 @@
     if (i < 0 || i + 1 >= t.trim().length || t.length < 90) return '<p>' + M(t) + '</p>';
     return '<p>' + M(t.slice(0, i + 1)) + '</p><details class="more"><summary>Więcej</summary><p>' + M(t.slice(i + 1).trim()) + '</p></details>';
   }
-  function rerenderLesson() { document.querySelectorAll('.chipx.ghost').forEach(g => g.remove()); if (view.name === 'lesson') { $app.innerHTML = vLesson(); afterLessonRender(); $app.insertAdjacentHTML('beforeend', '<p class="foot">' + storageLine() + '</p>'); const fb = $app.querySelector('.fb'); if (fb && fb.scrollIntoView) fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } }
+  function rerenderLesson() { document.querySelectorAll('.chipx.ghost').forEach(g => g.remove()); if (view.name === 'lesson') { $app.innerHTML = vLesson(); afterLessonRender(); $app.insertAdjacentHTML('beforeend', '<p class="foot">' + storageLine() + '</p>'); const fb = $app.querySelector('.fb'); if (fb && fb.scrollIntoView) fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); const live = document.getElementById('srlive'); if (live) { live.textContent = ''; if (fb) setTimeout(() => { live.textContent = (fb.innerText || fb.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 300); }, 60); } } }
 
   // ---------- PODSUMOWANIE LEKCJI ----------
   // lista odpowiedzi z testu: ✓ albo poprawna odpowiedź obok – bez czerwieni
@@ -677,6 +710,7 @@
     if (sum.mode === 'chtest' && sum.ch) { const dz = MP.DZIALY.find(x => x.id === sum.dz) || { name: '' }; h += '<p>' + (sum.ch.pass ? '<b>' + esc(dz.name) + '</b> – dział jest w pełni zaliczony. Za jakiś czas poproszę o krótkie powtórki, żeby wiedza została na dłużej.' : 'Dobrze poszło ' + sum.ch.ok + ' z ' + sum.ch.n + '. Do zaliczenia działu potrzeba ok. 8 na 10. Powtórzymy kilka rzeczy i spróbujesz jeszcze raz.') + '</p>'; }
     if (sum.mode === 'repair' && sum.repair) h += '<p>' + (sum.repair.good ? 'Ostatnie zadania poszły samodzielnie i bezbłędnie. Możesz iść dalej.' : 'Ostatnie zadania jeszcze sprawiały kłopot. Zrobimy kolejną rundę – z innym wyjaśnieniem.') + '</p>';
     if (sum.badges && sum.badges.length) h += '<p class="newbadge"><span class="ico">★</span> Nowa odznaka: <b>' + sum.badges.map(esc).join(', ') + '</b></p>';
+    if (sum.game && !sum.gameDone && MP.games) h += '<div class="goffer"><p><b>' + esc(sum.game.why) + '! 🎉</b>' + (sum.game.topic ? ' (' + esc(sum.game.topic) + ')' : '') + '<br>W nagrodę możesz zagrać w krótką minigrę – ' + MP.games.DURATION + ' sekund.</p><div class="bar2"><button class="btn pri" data-act="game">Zagram! 🎮</button><button class="btn ghost" data-act="nogame">Nie teraz</button></div></div>';
     if (isTest) h += answersList(sum.results);
     else {
       h += '<p>Zrobione zadania: <b>' + sum.n + '</b></p>';
@@ -724,12 +758,20 @@
     const P = S.prep;
     if (!P) {
       let h = '<h1>Przygotuj się do sprawdzianu</h1><p>Wybierz tematy, z których masz sprawdzian. Najpierw zrobimy krótki test diagnostyczny, potem ułożę plan powtórki, a na koniec próbny sprawdzian z limitem czasu.</p><form id="prepform" class="stack">';
+      { const t0 = now(), recent = Object.keys(MP.TOPICS).filter(id => MP.TOPICS[id].skills.some(sk => MP.isReady(sk) && S.skills[sk] && S.skills[sk].lastT && t0 - S.skills[sk].lastT < 21 * E.DAY));
+        const rec0 = E.recommend(S, t0), curDz = rec0 && rec0.skill ? MP.DZIALY.find(dz => dz.topics.some(tp => tp.skills.includes(rec0.skill))) : null;
+        const tiles = [];
+        if (recent.length) tiles.push('<button type="button" class="btn sm" data-ptiles="' + recent.join(',') + '">Ostatnio ćwiczone (' + recent.length + ')</button>');
+        if (curDz) tiles.push('<button type="button" class="btn sm" data-ptiles="' + curDz.topics.filter(t => t.skills.some(MP.isReady)).map(t => t.id).join(',') + '">Bieżący dział: ' + esc(curDz.name) + '</button>');
+        h += '<label class="row">Kiedy sprawdzian? <input type="date" id="pdate" min="' + new Date(t0).toISOString().slice(0, 10) + '"></label>';
+        if (tiles.length) h += '<div><p class="small muted" style="margin:0 0 6px">Szybki wybór:</p><div class="row">' + tiles.join('') + '</div></div>'; }
       MP.DZIALY.forEach(dz => { const tps = dz.topics.filter(t => t.skills.some(MP.isReady)); if (!tps.length) return; h += '<details' + (dz.id === 'duz' ? ' open' : '') + '><summary>' + esc(dz.name) + ' <label class="small" style="margin-left:8px;font-weight:400" onclick="event.stopPropagation()"><input type="checkbox" class="alldz"> cały dział</label></summary><div class="list" style="margin-top:8px">' + tps.map(t => '<label class="check"><input type="checkbox" name="t" value="' + t.id + '"><span><b>' + esc(t.name) + '</b><br><span class="small muted">' + t.skills.filter(MP.isReady).map(skName).join(' · ') + '</span></span></label>').join('') + '</div></details>'; });
       h += '<div><button class="btn pri" type="submit">Zaczynamy przygotowania →</button></div></form>';
       if (S.exams.length) h += '<section class="card" style="margin-top:16px"><h3>Poprzednie próbne sprawdziany</h3><div class="list">' + S.exams.slice().reverse().map((x, i) => '<button class="li" data-examres="' + (S.exams.length - 1 - i) + '"><span class="t"><b>' + new Date(x.t).toLocaleDateString('pl-PL') + ' · ' + x.pct + '%</b><small>' + x.topics.map(t => MP.TOPICS[t] ? MP.TOPICS[t].name : t).join(', ') + '</small></span></button>').join('') + '</div></section>';
       return h;
     }
     let h = '<h1>Przygotowanie do sprawdzianu</h1><p class="muted">Tematy: ' + P.topics.map(t => esc(MP.TOPICS[t].name)).join(', ') + '</p>';
+    if (P.date) { const days = Math.ceil((new Date(P.date + 'T08:00') - now()) / E.DAY); h += '<p class="chip ' + (days <= 2 ? 'review' : 'progress') + '">' + (days > 1 ? 'Do sprawdzianu: ' + days + ' dni' + (P.phase === 'practice' && days > 0 ? ' · ' + Math.max(1, Math.ceil(P.plan.filter(p => p.status !== 'ok').length / days)) + ' ' + U.pl(Math.max(1, Math.ceil(P.plan.filter(p => p.status !== 'ok').length / days)), 'umiejętność', 'umiejętności', 'umiejętności') + ' dziennie' : '') : days === 1 ? 'Sprawdzian jutro – powodzenia!' : days === 0 ? 'Sprawdzian dzisiaj – powodzenia!' : 'Termin sprawdzianu minął') + '</p>'; }
     const steps = [['diag', 'Test diagnostyczny'], ['practice', 'Plan powtórki i ćwiczenia'], ['exam', 'Próbny sprawdzian']];
     const pi = P.phase === 'diag' ? 0 : P.phase === 'practice' ? 1 : 2;
     h += '<div class="row" style="margin-bottom:14px">' + steps.map((s, i) => '<span class="chip ' + (i < pi ? 'done' : i === pi ? 'progress' : 'new') + '">' + (i + 1) + '. ' + s[1] + '</span>').join('') + '</div>';
@@ -827,7 +869,7 @@
   const linkForm = (pr) => '<form id="linkform" data-id="' + pr.id + '" class="card" style="margin:6px 0 10px;background:var(--paper2,#f6f7fb)"><label for="lem"><b>Adres Gmail / konta Google dziecka (' + esc(pr.name) + ')</b></label><p class="small muted" style="margin:4px 0 8px">Dziecko zaloguje się tym kontem na tej stronie i zobaczy tylko swoje lekcje – bez panelu rodzica i bez innych dzieci. Postępy będą widoczne tutaj.</p><div class="row"><input id="lem" type="email" autocomplete="off" value="' + esc(pr.email || '') + '" placeholder="np. kuba.nowak@gmail.com" style="flex:1;min-width:200px"><button class="btn sm pri" type="submit">Zapisz</button>' + (pr.email ? '<button class="btn sm ghost" type="button" data-punlink="' + pr.id + '">Odłącz konto</button>' : '') + '<button class="btn sm ghost" type="button" data-act="linkcancel">Anuluj</button></div><p class="small" id="lemmsg" role="status"></p></form>';
   function kidSettingsLearnHTML() {
     let h = '';
-    h += '<section class="card" style="margin-top:16px"><h2>Nauka i dane</h2><div class="stack"><label class="row">Zadań w jednej serii: <select id="slen" class="btn sm">' + [3, 5, 8, 10].map(n => '<option' + ((S.settings.seriesLen || 5) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label><p class="small muted" style="margin:-6px 0 0">Po serii dziecko wybiera: jeszcze jedna seria albo koniec. Ile serii potrzeba do opanowania, zależy od tego, jak dziecku idzie.</p><label class="check"><input type="checkbox" id="sgrade"' + (S.settings.showGrade ? ' checked' : '') + '><span>Pokazuj orientacyjną ocenę szkolną po próbnym sprawdzianie</span></label>';
+    h += '<section class="card" style="margin-top:16px"><h2>Nauka i dane</h2><div class="stack"><label class="row">Zadań w jednej serii: <select id="slen" class="btn sm">' + [3, 5, 8, 10].map(n => '<option' + ((S.settings.seriesLen || 5) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label><p class="small muted" style="margin:-6px 0 0">Po serii dziecko wybiera: jeszcze jedna seria albo koniec. Ile serii potrzeba do opanowania, zależy od tego, jak dziecku idzie.</p><label class="check"><input type="checkbox" id="sgames"' + (S.settings.games !== false ? ' checked' : '') + '><span>Minigra w nagrodę po opanowaniu tematu (40 s, zawsze można pominąć)</span></label><p class="small muted" style="margin:-6px 0 0">Gra ćwiczy materiał z klasy dziecka. <button class="btn sm ghost" data-act="gamedemo">Wypróbuj grę</button></p><label class="check"><input type="checkbox" id="sgrade"' + (S.settings.showGrade ? ' checked' : '') + '><span>Pokazuj orientacyjną ocenę szkolną po próbnym sprawdzianie</span></label>';
     h += '<details><summary>Kod postępów (kopia zapasowa / przeniesienie na inne urządzenie)</summary><p class="small muted">Skopiuj kod i zachowaj go. Na innym urządzeniu wklej go poniżej i kliknij „Wczytaj". Kod zawiera tylko postępy w nauce.</p><textarea id="code" readonly></textarea><div class="bar2"><button class="btn sm" data-act="mkcode">Pokaż kod</button><button class="btn sm" data-act="copycode">Kopiuj</button></div><textarea id="incode" placeholder="Wklej tu kod postępów"></textarea><div class="bar2"><button class="btn sm" data-act="loadcode">Wczytaj kod</button></div><p id="codemsg" class="small"></p></details>';
     h += '<div><button class="btn sm ghost" data-act="reset">Wyczyść wszystkie postępy…</button></div></div></section>';
     return h;
@@ -883,13 +925,13 @@
       body = '<h1>Ustawienia ogólne</h1><p class="muted">Dotyczą całego konta rodzica i wszystkich dzieci.</p>';
       if (MP.store.auth.configured()) body += '<section class="card sset"><h2>Konto rodzica</h2>' + (who ? '<div class="srow"><div class="st">' + esc(who) + '<small>' + (viaG ? 'Logowanie kontem Google' : 'Logowanie e-mailem i hasłem' + (MP.store.auth.verified() ? ' · adres potwierdzony' : ' · adres niepotwierdzony')) + '</small></div></div>' + (viaG ? '' : '<div class="srow"><div class="st">Hasło<small>Wyślemy link do ustawienia nowego hasła na ' + esc(who) + '.</small></div><button class="btn sm" data-act="pwreset">Zmień hasło</button></div>') + '<div class="srow"><div class="st">Wyloguj z tego urządzenia<small>Postępy zostaną na koncie.</small></div><button class="btn sm" data-act="glogout">Wyloguj</button></div>' : '<div class="srow"><div class="st">Nie zalogowano – postępy są tylko w tej przeglądarce.</div><button class="btn sm pri" data-act="gloginp">Zaloguj się jako rodzic</button></div>') + '</section>';
       body += '<section class="card sset"><h2>PIN rodzica</h2><p class="small muted">PIN chroni panel rodzica, gdy dziecko ćwiczy na Twoim urządzeniu (przycisk „Zakończ naukę” wymaga wtedy PIN-u).</p>' + '<div class="row"><input id="newpin" class="inp" style="max-width:200px;font-size:18px" inputmode="numeric" maxlength="8" placeholder="nowy PIN"><button class="btn sm" data-act="setpin">' + (IDX.pin ? 'Zmień PIN' : 'Ustaw PIN') + '</button>' + (IDX.pin ? '<button class="btn sm ghost" data-act="delpin">Usuń PIN</button>' : '') + '</div>' + '</section>';
-      body += '<section class="card sset"><h2>Prywatność</h2><p>Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar, zainteresowania i postępy w nauce. Bez reklam, bez śledzenia, bez danych osobowych.</p></section>';
+      body += '<section class="card sset"><h2>Prywatność</h2><p>Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar, zainteresowania, imiona bliskich osób do zadań (jeśli je wpiszecie – bez nazwisk) i postępy w nauce. Bez reklam, bez śledzenia, bez danych osobowych.</p></section>';
       body += aboutHTML();
     } else {
       const pr = IDX.profiles.find(x => x.id === tab); if (!pr) { view.tab = 'og'; return vPSettings(); }
       ensureDraft();
       body = '<div class="row" style="gap:12px;flex-wrap:nowrap;margin-bottom:6px">' + MP.avatar.svg(pr.av, 52) + '<div><h1 style="margin:0">' + esc(pr.name) + '</h1><div class="muted small">Ustawienia tego dziecka</div></div><span style="flex:1"></span><button class="btn sm" data-pkid="' + pr.id + '">Zobacz postępy →</button></div>';
-      body += '<section class="card sset"><h2>Profil</h2>' + nameBlock() + '<h3 style="margin-top:16px">Klasa</h3><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '<h3 style="margin-top:16px">Awatar</h3>' + avatarBlock() + '<h3 style="margin-top:16px">Pomocnik</h3>' + helperBlock() + '<h3 style="margin-top:16px">Zainteresowania</h3><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p><div class="bar2"><button class="btn pri" data-act="saveprof">Zapisz profil</button></div></section>';
+      body += '<section class="card sset"><h2>Profil</h2>' + nameBlock() + '<h3 style="margin-top:16px">Klasa</h3><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '<h3 style="margin-top:16px">Awatar</h3>' + avatarBlock() + '<h3 style="margin-top:16px">Pomocnik</h3>' + helperBlock() + '<h3 style="margin-top:16px">Zainteresowania</h3><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p><h3 style="margin-top:16px">Bliskie osoby w zadaniach</h3>' + peopleBlock() + '<div class="bar2"><button class="btn pri" data-act="saveprof">Zapisz profil</button></div></section>';
       if (MP.store.who()) body += '<section class="card sset" id="sec-login"><h2>Logowanie dziecka</h2>' + (pr.email && linkOpen !== pr.id ? '<div class="srow"><div class="st">Konto Google: ' + esc(pr.email) + '<small>' + esc(pr.name) + ' loguje się samo: „Jestem uczniem” → „Zaloguj się jako uczeń”.</small></div><button class="btn sm" data-plink="' + pr.id + '">Zmień</button><button class="btn sm ghost" data-punlink="' + pr.id + '">Odłącz</button></div>' : (linkOpen === pr.id || !pr.email ? linkForm(pr) : '')) + (linkDone === pr.id ? '<div class="fb ok" role="status"><b>Konto dziecka zostało połączone. Może już zalogować się do aplikacji.</b></div>' : '') + '</section>';
       body += kidSettingsLearnHTML();
       body += '<section class="card sset dzone"><h2>Usuwanie</h2><div class="srow"><div class="st">Usuń konto dziecka<small>Usuwa profil, wszystkie postępy' + (pr.email ? ' i połączenie z kontem Google' : '') + '. Tego nie da się cofnąć.</small></div><button class="btn sm danger" data-pdel="' + pr.id + '">Usuń konto</button></div></section>';
@@ -965,7 +1007,7 @@
   }
 
   // ---------- PROFIL: imię, awatar, zainteresowania ----------
-  function ensureDraft() { if (!draft) { const P = (view.name === 'onboard' && view.isNew) || !S ? {} : (S.profile || {}); draft = { name: P.name || '', grade: P.grade || null, av: Object.assign({}, MP.avatar.DEF, P.av || MP.avatar.random()), interests: (P.interests || []).slice(), helper: MP.helpers.id(P.helper) }; } return draft; }
+  function ensureDraft() { if (!draft) { const P = (view.name === 'onboard' && view.isNew) || !S ? {} : (S.profile || {}); draft = { name: P.name || '', grade: P.grade || null, av: Object.assign({}, MP.avatar.DEF, P.av || MP.avatar.random()), interests: (P.interests || []).slice(), helper: MP.helpers.id(P.helper), people: (P.people || []).map(x => Object.assign({}, x)) }; } return draft; }
   function nameBlock() { return '<label for="nm" class="small muted">Imię albo ksywka (wystarczy samo imię)</label><input id="nm" class="inp" maxlength="20" autocomplete="off" value="' + esc(draft.name) + '" placeholder="np. Kuba">'; }
   function avatarBlock() {
     const A = MP.avatar, av = draft.av;
@@ -1008,7 +1050,7 @@
     if (st === 1) h += '<h1>Do której klasy chodzisz' + (draft.name ? ', ' + esc(draft.name) : '') + '?</h1><p class="muted">Dobiorę materiał do Twojej klasy. Zawsze możesz to zmienić w profilu.</p>' + gradeBlock() + '<div class="bar2"><button class="btn" data-ob="0">← Wstecz</button><button class="btn pri" data-ob="2">Dalej →</button></div>';
     if (st === 2) h += '<h1>Zrób swój awatar</h1><p class="muted">Wybierz kolory, fryzurę i dodatki. Zawsze możesz to zmienić później.</p>' + avatarBlock() + '<div class="bar2"><button class="btn" data-ob="1">← Wstecz</button><button class="btn pri" data-ob="3">Dalej →</button></div>';
     if (st === 3) h += '<h1>Wybierz swojego pomocnika</h1><p class="muted">Pomocnik będzie z Tobą w czasie nauki: powie, czy odpowiedź jest dobra, pocieszy, gdy coś nie wyjdzie, i podpowie, gdy poprosisz o wskazówkę. Możesz go później zmienić w ustawieniach.</p>' + helperBlock() + '<div class="bar2"><button class="btn" data-ob="2">← Wstecz</button><button class="btn pri" data-ob="4">Dalej →</button></div>';
-    if (st === 4) h += '<h1>Co Cię interesuje?</h1><p>Zaznacz tyle tematów, ile chcesz (najlepiej co najmniej 3). Zadania z treścią będą o tym, co lubisz – np. o rakietach, rybach albo meczach.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">' + (draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.') + '</p><div class="bar2"><button class="btn" data-ob="3">← Wstecz</button><button class="btn pri" data-ob="done">Gotowe – zaczynamy!</button></div>';
+    if (st === 4) h += '<h1>Co Cię interesuje?</h1><p>Zaznacz tyle tematów, ile chcesz (najlepiej co najmniej 3). Zadania z treścią będą o tym, co lubisz – np. o rakietach, rybach albo meczach.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">' + (draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.') + '</p>' + peopleBlock(true) + '<div class="bar2"><button class="btn" data-ob="3">← Wstecz</button><button class="btn pri" data-ob="done">Gotowe – zaczynamy!</button></div>';
     return h + '</section></div>';
   }
   function vProfil() {
@@ -1023,6 +1065,7 @@
       '<section class="card sset"><h2>Imię lub ksywka</h2>' + nameBlock() + '</section>' +
       '<section class="card sset"><h2>Mój pomocnik</h2><p class="muted small">Pomocnik mówi Ci, czy odpowiedź jest dobra, i podpowiada. Wybór zapisuje się od razu.</p>' + helperBlock() + '</section>' +
       '<section class="card sset"><h2>Zainteresowania</h2><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p></section>' +
+      '<section class="card sset"><h2>Bliskie osoby w zadaniach</h2>' + peopleBlock() + '</section>' +
       (local ? '<section class="card sset"><h2>Klasa</h2><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '</section>' : '<section class="card sset"><h2>Klasa</h2><p>' + (MP.GRADES[S.profile.grade] ? MP.GRADES[S.profile.grade].name : '') + '</p><p class="muted small">Klasę zmienia rodzic w swoich ustawieniach.</p></section>') +
       '<div class="bar2" style="margin:0 0 16px"><button class="btn pri" data-act="saveprof">Zapisz zmiany</button><button class="btn" data-act="cancelprof">Anuluj</button></div>' +
       '<section class="card sset"><h2>Konto</h2>' + acct + '</section></div>';
@@ -1032,13 +1075,32 @@
     const nm = document.getElementById('nm');
     if (nm) { nm.addEventListener('input', () => { draft.name = nm.value; }); nm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && view.name === 'onboard') { e.preventDefault(); obGo('1'); } }); if (view.name === 'onboard') nm.focus(); }
   }
+  // bliskie osoby: tylko imiona/ksywki (bez nazwisk), do zadań z treścią
+  const ROLEW = /^(pies|piesek|kot|kotek|chomik|świnka|królik|papuga|rybka|konik|żółw|ciocia|ciotka|wujek|babcia|dziadek|brat|siostra|kuzyn|kuzynka|pani|pan|mama|tata)$/i;
+  function cleanPerson(raw) {
+    const t = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (!t) return { err: 'Wpisz imię.' };
+    if (t.length > 20 || /[0-9@#$%&*+=_/\\<>"]/.test(t)) return { err: 'Wpisz samo imię lub ksywkę – bez nazwiska, cyfr i znaków.' };
+    if (!/^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż' -]+$/.test(t)) return { err: 'Imię może mieć tylko litery.' };
+    const w = t.split(' ');
+    if (w.length > 2 || (w.length === 2 && !ROLEW.test(w[0]))) return { err: 'Wystarczy samo imię, bez nazwiska (można np. „babcia Ela” albo „pies Burek”).' };
+    const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+    return { n: w.length === 2 ? w[0].toLowerCase() + ' ' + cap(w[1]) : cap(t) }; // „babcia Ela” – wielka litera na początku zdania dodaje generator
+  }
+  function peopleBlock(onb) {
+    const P = draft.people || (draft.people = []);
+    return (onb ? '<h2 style="margin-top:18px">Kogo lubisz? <span class="small muted" style="font-weight:400">(nieobowiązkowe)</span></h2>' : '') +
+      '<p class="muted small">' + (onb ? 'Wpisz imiona bliskich osób – rodzeństwa, przyjaciół, a nawet zwierzaka. Czasem pojawią się w zadaniach z treścią.' : 'Imiona bliskich osób czasem pojawiają się w zadaniach z treścią (zawsze w miłych sytuacjach).') + ' Tylko imię lub ksywka, bez nazwisk.</p>' +
+      '<div class="ppl">' + P.map((x, i) => '<span class="pchip">' + esc(x.n) + ' <small>(' + (x.g === 'f' ? 'ona' : 'on') + ')</small><button type="button" data-pdelp="' + i + '" aria-label="Usuń ' + esc(x.n) + '">×</button></span>').join('') + '</div>' +
+      (P.length < 8 ? '<div class="row" style="margin-top:8px"><input id="pnm" class="inp" maxlength="20" autocomplete="off" placeholder="np. Kuba, babcia Ela" style="flex:1;min-width:160px"><button type="button" class="btn sm" data-padd="m">+ on</button><button type="button" class="btn sm" data-padd="f">+ ona</button></div>' : '<p class="small muted">To już 8 osób – wystarczy.</p>');
+  }
   function cleanName(n) { return String(n || '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20); }
   function obGo(to) {
     if (to === '1' && !cleanName(draft.name)) { toast('Wpisz imię albo ksywkę – wystarczy jedno słowo.'); return; }
     if (to === '2' && !draft.grade) { toast('Wybierz klasę.'); return; }
     if (to === 'done') {
       if (!draft.interests.length) { toast('Wybierz przynajmniej jeden temat.'); return; }
-      const prof = { name: cleanName(draft.name), grade: +draft.grade, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper) };
+      const prof = { name: cleanName(draft.name), grade: +draft.grade, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper), people: (draft.people || []).slice() };
       if (view.isNew || !S) {
         const id = MP.store.newId();
         IDX.profiles.push(Object.assign({ id, created: now(), updated: now() }, prof)); MP.store.saveIndex(IDX);
@@ -1058,7 +1120,7 @@
     if (e.target.id === 'prepform') {
       const tps = [...e.target.querySelectorAll('input[name=t]:checked')].map(x => x.value);
       if (!tps.length) return toast('Zaznacz przynajmniej jeden temat.');
-      const specs = E.prepCreate(S, tps, now()); S.prep.diagSpecs = specs; save(); render();
+      const specs = E.prepCreate(S, tps, now()); S.prep.diagSpecs = specs; const dt = document.getElementById('pdate'); if (dt && dt.value) { S.prep.date = dt.value; } save(); render();
     }
     if (e.target.id === 'linkform') {
       const id = e.target.dataset.id, p = IDX.profiles.find(x => x.id === id), msg = document.getElementById('lemmsg');
@@ -1081,6 +1143,7 @@
   });
   $app.addEventListener('change', (e) => {
     if (e.target.id === 'slen') { S.settings.seriesLen = +e.target.value; save(); }
+    if (e.target.id === 'sgames') { S.settings.games = !!e.target.checked; save(); }
     if (e.target.classList && e.target.classList.contains('alldz')) { const dd = e.target.closest('details'); dd.open = true; dd.querySelectorAll('input[name=t]').forEach(x => { x.checked = e.target.checked; }); }
     if (e.target.id === 'sgrade') { S.settings.showGrade = e.target.checked; save(); }
     if (e.target.id === 'tl' && S.prep) { S.prep.timeLimit = +e.target.value; save(); }
@@ -1120,12 +1183,15 @@
     if (d.helper) { draft.helper = d.helper; if (view.name === 'profil' && S && S.profile) { S.profile.helper = d.helper; save(); toast('Twój pomocnik: ' + esc(MP.helpers.C[d.helper].name) + ' 👋', 2000); } return rerenderProfile(); }
     if (d.int) { const i = draft.interests.indexOf(d.int); if (i >= 0) draft.interests.splice(i, 1); else draft.interests.push(d.int); b.setAttribute('aria-pressed', i < 0); const m = document.getElementById('intmsg'); if (m) m.textContent = draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.'; return; }
     if (d.act === 'avrand') { draft.av = MP.avatar.random(); return rerenderProfile(); }
-    if (d.act === 'saveprof') { if (!cleanName(draft.name)) return toast('Wpisz imię.'); if (!draft.interests.length) return toast('Wybierz przynajmniej jeden temat.'); S.profile = { name: cleanName(draft.name), grade: +draft.grade || S.profile.grade || 6, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper) }; draft = null; applyProfile(); save(); toast('Zapisano.'); return render(); }
+    if (d.act === 'saveprof') { if (!cleanName(draft.name)) return toast('Wpisz imię.'); if (!draft.interests.length) return toast('Wybierz przynajmniej jeden temat.'); S.profile = { name: cleanName(draft.name), grade: +draft.grade || S.profile.grade || 6, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper), people: (draft.people || []).slice() }; draft = null; applyProfile(); save(); toast('Zapisano.'); return render(); }
     if (d.act === 'cancelprof') { draft = null; return go('start'); }
+    if (d.padd) { const inp = document.getElementById('pnm'); const c = cleanPerson(inp && inp.value); if (c.err) { toast(c.err); return; } ensureDraft(); draft.people = draft.people || []; if (draft.people.some(x => x.n.toLowerCase() === c.n.toLowerCase())) { toast('To imię już jest na liście.'); return; } draft.people.push({ n: c.n, g: d.padd === 'f' ? 'f' : 'm' }); rerenderProfile(); const ni = document.getElementById('pnm'); if (ni) ni.focus(); return; }
+    if (d.pdelp !== undefined) { ensureDraft(); (draft.people || []).splice(+d.pdelp, 1); return rerenderProfile(); }
     if (d.go2) return go(d.go2);
     if (d.dzial) return go('dzial', { id: d.dzial });
     if (d.topicgo || d.topic) return go('topic', { id: d.topicgo || d.topic });
     if (d.learn) { const sid = d.learn; return d.mode === 'review' ? startLesson({ mode: 'review', skills: [sid] }, view.name) : startLesson({ mode: 'learn', skill: sid }, view.name); }
+    if (d.ptiles) { d.ptiles.split(',').forEach(id => { const x = $app.querySelector('#prepform input[name=t][value="' + id + '"]'); if (x) { x.checked = true; const det = x.closest('details'); if (det) det.open = true; } }); return; }
     if (d.preplearn) return startLesson({ mode: 'prep', skill: d.preplearn, prepId: S.prep.id }, 'sprawdzian');
     if (d.examres !== undefined) return go('examres', { idx: +d.examres });
     // (stare przyciski znaków zastąpione klawiaturą matematyczną – mathinput.js)
@@ -1153,15 +1219,18 @@
     if (act === 'exstep') { const ex = b.closest('.ex'); const hid = ex.querySelector('li.hid'); if (hid) hid.classList.remove('hid'); if (!ex.querySelector('li.hid')) b.remove(); return; }
     if (act === 'check') { const tp = MP.TOPICS[d.topicId]; const ids = tp.skills.filter(MP.isReady); return startLesson({ mode: 'check', skills: ids, max: Math.max(5, Math.min(8, ids.length * 2)) }, 'dzialy'); }
     if (act === 'cardnext') { advance(); save(); return rerenderLesson(); }
+    if (act === 'game') { view = { name: 'game', from: view.from, sum: view.sum, back: view }; render(); window.scrollTo(0, 0); return; }
+    if (act === 'nogame') { if (view.sum) view.sum.gameDone = true; return render(); }
+    if (act === 'gamedemo') { view = { name: 'game', back: view }; render(); window.scrollTo(0, 0); return; }
     if (act === 'next') { advance(); save(); if (view.name === 'summary') return render(); return rerenderLesson(); }
     if (act === 'checkans') return onCheck();
     if (act === 'hint') { const c = S.session.cur; const it = curItem(); if (it.type === 'input' || it.type === 'fill' || it.type === 'multi' || it.type === 'match') c.resp = readResp(it); c.hints++; save(); return rerenderLesson(); }
     if (act === 'showsol' || act === 'dontknow') {
       const c = S.session.cur; const it = curItem();
       if (act === 'dontknow' && !c.attempts) { const rec = E.record(S, { skill: c.spec.skill, d: c.spec.d, type: it.type, hints: 3, attempt: 1, sec: Math.round((now() - c.tl) / 1000), mode: S.session.mode, solShown: true }, { ok: false, code: 'unknown' }, now()); E.afterAnswer(S, c.spec, rec, now()); noteResult(c, '—'); c.attempts = 1; }
-      if (act === 'dontknow') { const wasDone = c.done; c.done = true; c.wrongNow = false; if (!wasDone && !S.session.fixed && !c.spec.analog) E.queueAnalog(S, c.spec);
-        const corr = correctLabel(it); c.fb = '<div class="fb info">' + (S.session.fixed ? 'Nic nie szkodzi – zapisane.' : 'Nic nie szkodzi. ' + (corr ? 'Poprawna odpowiedź: <b>' + corr + '</b>. ' : '') + 'Zobacz rozwiązanie poniżej – następne zadanie będzie podobne.') + '</div>'; }
-      c.solShown = !S.session.fixed || act === 'showsol';
+      if (act === 'dontknow') { const wasDone = c.done; c.done = true; c.wrongNow = false; if (!wasDone && !isTestSess(S.session) && !c.spec.analog) E.queueAnalog(S, c.spec);
+        const corr = correctLabel(it); c.fb = '<div class="fb info">' + (isTestSess(S.session) ? 'Nic nie szkodzi – zapisane.' : 'Nic nie szkodzi. ' + (corr ? 'Poprawna odpowiedź: <b>' + corr + '</b>. ' : '') + 'Zobacz rozwiązanie poniżej – następne zadanie będzie podobne.') + '</div>'; }
+      c.solShown = !isTestSess(S.session) || act === 'showsol';
       save(); return rerenderLesson();
     }
     if (act === 'pause') {
