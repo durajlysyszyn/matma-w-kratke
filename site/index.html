@@ -412,6 +412,7 @@ details.more summary{cursor:pointer;color:var(--pen);font-size:14px;margin:-4px 
 .gwhy{min-height:1.4em;margin:8px 0 0;color:var(--mute)}.gbig{font-size:26px;margin:6px 0}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media(pointer:coarse){.btn.sm{min-height:44px}.map.big .cell{width:44px;height:44px}.map.big .sq{gap:6px}}
+.ppl{display:flex;flex-wrap:wrap;gap:6px}.pchip{display:inline-flex;align-items:center;gap:4px;padding:4px 4px 4px 12px;border-radius:999px;background:var(--pen-soft);border:1px solid var(--pen);font-weight:600}.pchip small{color:var(--mute);font-weight:400}.pchip button{min-width:36px;min-height:36px;border:0;background:none;color:inherit;font-size:20px;cursor:pointer;border-radius:50%}
 </style>
 </head>
 <body>
@@ -737,6 +738,14 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP = (typeof wind
     return '<svg viewBox="0 0 ' + Math.max(60, x) + ' ' + H + '" class="vis money" role="img" aria-label="' + list.map(m => m.v + ' ' + m.u).join(', ') + '" style="max-width:' + Math.min(100, Math.max(30, x / 6)) + '%">' + out + '</svg>';
   }
   MP.moneySvg = moneySvg;
+  // imię do zadania z treścią: czasem osoba wpisana przez dziecko/rodzica (MP.people), inaczej z listy gotowych imion.
+  // Bez wpisanych osób losowanie jest identyczne jak wcześniej (te same zadania z tych samych ziaren).
+  MP.people = [];
+  MP.pickKid = (r, list, exclude) => {
+    const ppl = (MP.people || []).filter(p => p && p.n && p.n !== exclude);
+    if (ppl.length && r.chance(0.6)) { const p = r.pick(ppl); return [p.n, p.g === 'f' ? 'f' : 'm']; }
+    const l = exclude ? list.filter(k => k[0] !== exclude) : list; return r.pick(l);
+  };
   // rozkład kwoty na najmniejszą liczbę monet (zł: 5, 2, 1; gr: 50, 20, 10, 5, 2, 1) – do rysunku
   MP.moneyList = (zl, gr) => { const out = []; let z = zl || 0, g = gr || 0;
     [5, 2, 1].forEach(v => { while (z >= v) { out.push({ v, u: 'zł' }); z -= v; } });
@@ -2667,7 +2676,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią', grade: 2, mainCode: 'read', prereq: ['k2_add', 'k2_sub'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const th = MP.th(), T = th.k2t || MP.THEMES.szkola.k2t, [nm, g] = r.pick(KIDS);
+      const th = MP.th(), T = th.k2t || MP.THEMES.szkola.k2t, [nm, g] = MP.pickKid(r, KIDS);
       const t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       const op = d === 3 ? r.pick(['mul', 'div']) : r.pick(['add', 'sub']);
       if (op === 'add') { const a = d === 1 ? r.int(5, 30) : r.int(15, 60), b = d === 1 ? r.int(2, 9) : r.int(11, 35); const s = a + b;
@@ -2940,13 +2949,13 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią do 20', grade: 1, mainCode: 'op_confuse', prereq: ['k1_add', 'k1_sub'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns(), [nm, g] = r.pick(KIDS), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      const T = nouns(), [nm, g] = MP.pickKid(r, KIDS), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       const op = d === 1 ? 'add' : d === 2 ? r.pick(['add', 'sub']) : r.pick(['sub', 'cmp']);
       if (op === 'add') { const a = r.int(2, d === 1 ? 7 : 12), b = r.int(2, (d === 1 ? 10 : 20) - a); const s = a + b;
         return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dostał', 'Dostała') + ' jeszcze ' + t(b) + '. Ile ' + T[2] + ' ma teraz?', value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: ['Czy teraz ma więcej, czy mniej? Więcej – dodajemy.', 'Działanie: ' + a + ' + ' + b + '.', 'Możesz narysować kółka i je policzyć.'], sol: [a + ' + ' + b + ' = ' + s, 'Odpowiedź: ' + nm + ' ma ' + t(s) + '.'] }; }
       if (op === 'sub') { const a = r.int(8, 20), b = r.int(2, a - 2); const v = a - b;
         return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Oddał', 'Oddała') + ' ' + t(b) + '. Ile ' + T[2] + ' ' + vg(g, 'mu', 'jej') + ' zostało?', value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: ['Zostało więcej czy mniej? Mniej – odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, 'Odpowiedź: zostało ' + t(v) + '.'] }; }
-      const [nm2] = r.pick(KIDS.filter(k => k[0] !== nm)); const a = r.int(9, 20), b = r.int(2, a - 2);
+      const [nm2] = MP.pickKid(r, KIDS, nm); const a = r.int(9, 20), b = r.int(2, a - 2);
       return { prompt: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + t(b) + '. O ile więcej ' + T[2] + ' ma ' + nm + '?', value: N(a - b), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(a), code: 'read' }], hints: ['„O ile więcej" – sprawdzamy różnicę, czyli odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Ile trzeba dodać do ' + b + ', żeby było ' + a + '?'], sol: [a + ' − ' + b + ' = ' + (a - b), 'Odpowiedź: o ' + (a - b) + '.'] };
     }
   });
@@ -3088,12 +3097,12 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią (jedno- i dwudziałaniowe)', grade: 3, mainCode: 'read', prereq: ['k3_add', 'tabl'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns(), [nm, g] = r.pick(KIDS), [nm2] = r.pick(KIDS.filter(k => k[0] !== nm)), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      const T = nouns(), [nm, g] = MP.pickKid(r, KIDS), [nm2] = MP.pickKid(r, KIDS, nm), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       if (d === 1) { const b = r.int(3, 9), k = r.int(2, 6), a = b * k;
         if (r.chance(0.5)) return { prompt: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + t(b) + '. Ile razy więcej ' + T[2] + ' ma ' + nm + '?', value: N(k), wrong: [{ v: N(a - b), code: 'k3_times' }, { v: N(a + b), code: 'op_confuse' }], hints: ['„Ile razy więcej" – dzielimy większą liczbę przez mniejszą.', 'Działanie: ' + a + ' : ' + b + '.', 'Ile razy ' + b + ' mieści się w ' + a + '?'], sol: [a + ' : ' + b + ' = ' + k, 'Odpowiedź: ' + k + ' razy więcej.'] };
         return { prompt: nm + ' ma ' + t(b) + ', a ' + nm2 + ' ma ' + k + ' razy więcej. Ile ' + T[2] + ' ma ' + nm2 + '?', value: N(a), wrong: [{ v: N(b + k), code: 'k3_times' }, { v: N(b), code: 'read' }], hints: ['„' + k + ' razy więcej" – mnożymy.', 'Działanie: ' + b + ' · ' + k + '.', 'Policz z tabliczki mnożenia.'], sol: [b + ' · ' + k + ' = ' + a, 'Odpowiedź: ' + nm2 + ' ma ' + t(a) + '.'] }; }
       if (d === 2) { const n = r.int(3, 8), p = r.int(3, 9), extra = r.int(5, 30);
-        return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' paczek po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ' i jeszcze ' + t(extra) + ' osobno. Ile ' + T[2] + ' ' + vg(g, 'kupił', 'kupiła') + ' razem?', value: N(n * p + extra), wrong: [{ v: N(n + p + extra), code: 'op_confuse' }, { v: N(n * p), code: 'read' }, { v: N(n * (p + extra)), code: 'order_ltr' }], hints: ['Najpierw policz, ile jest w paczkach.', n + ' · ' + p + ' = ' + n * p + '.', 'Dodaj te osobno: ' + n * p + ' + ' + extra + '.'], sol: [n + ' · ' + p + ' = ' + n * p, n * p + ' + ' + extra + ' = ' + (n * p + extra), 'Odpowiedź: razem ' + t(n * p + extra) + '.'] }; }
+        return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, 'paczkę', 'paczki', 'paczek') + ' po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ' i jeszcze ' + t(extra) + ' osobno. Ile ' + T[2] + ' ' + vg(g, 'kupił', 'kupiła') + ' razem?', value: N(n * p + extra), wrong: [{ v: N(n + p + extra), code: 'op_confuse' }, { v: N(n * p), code: 'read' }, { v: N(n * (p + extra)), code: 'order_ltr' }], hints: ['Najpierw policz, ile jest w paczkach.', n + ' · ' + p + ' = ' + n * p + '.', 'Dodaj te osobno: ' + n * p + ' + ' + extra + '.'], sol: [n + ' · ' + p + ' = ' + n * p, n * p + ' + ' + extra + ' = ' + (n * p + extra), 'Odpowiedź: razem ' + t(n * p + extra) + '.'] }; }
       const price = r.int(3, 9), n = r.int(2, 6), pay = [20, 50, 100].find(x => x > price * n);
       return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' po ' + price + ' zł. ' + vg(g, 'Zapłacił', 'Zapłaciła') + ' banknotem ' + pay + ' zł. Ile reszty ' + vg(g, 'dostał', 'dostała') + '?', value: N(pay - n * price), wrong: [{ v: N(pay - n - price), code: 'op_confuse' }, { v: N(n * price), code: 'read' }, { v: N(pay - price), code: 'read' }], hints: ['Najpierw: ile kosztowały wszystkie?', n + ' · ' + price + ' = ' + n * price + ' zł.', 'Reszta: ' + pay + ' − ' + n * price + '.'], sol: [n + ' · ' + price + ' = ' + n * price + ' zł', pay + ' − ' + n * price + ' = ' + (pay - n * price) + ' zł', 'Odpowiedź: ' + (pay - n * price) + ' zł reszty.'] };
     }
@@ -4207,7 +4216,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
   });
   // zadanie tekstowe: wybór danych potrzebnych do rozwiązania (transfer)
   add('fr_add_diff', 'multisel', [3], (r) => {
-    const [a, b, c, dd] = pickPair(r, 2); const T = MP.th(); const nm = r.pick(['Ola', 'Kuba', 'Zosia', 'Antek']);
+    const [a, b, c, dd] = pickPair(r, 2); const T = MP.th(); const nm = MP.pickKid(r, [['Ola', 'f'], ['Kuba', 'm'], ['Zosia', 'f'], ['Antek', 'm']])[0];
     const opts = ['rano: ' + fr(a, b) + ' h', 'po południu: ' + fr(c, dd) + ' h', 'cena biletu: ' + r.int(8, 25) + ' zł', 'liczba osób: ' + r.int(3, 9)];
     return { type: 'multisel', aspect: 'transfer', prompt: nm + ' w sobotę ćwiczy dwa razy: rano ' + fr(a, b) + ' godziny, a po południu ' + fr(c, dd) + ' godziny. Na basen jedzie z kolegami (' + opts[3].split(': ')[1] + ' osób), bilet kosztuje ' + opts[2].split(': ')[1] + '. <b>Ile godzin ćwiczy razem w sobotę?</b> Zaznacz tylko dane potrzebne do odpowiedzi na to pytanie.', opts, answer: { kind: 'multisel', set: [0, 1] }, extraCode: 'read', missCode: 'read', selHint: 'Zaznacz dane potrzebne do obliczenia odpowiedzi (dotknij, żeby zaznaczyć lub odznaczyć).',
       hints: ['O co pyta zadanie? O łączny czas ćwiczeń.', 'Cena biletu i liczba osób nie mówią nic o czasie.', 'Potrzebne są oba czasy: rano i po południu – potem je dodasz.'], sol: ['Potrzebne: ' + fr(a, b) + ' h i ' + fr(c, dd) + ' h', 'Razem: ' + fr(a, b) + ' + ' + fr(c, dd) + ' = ' + fs(U.add(F(a, b), F(c, dd))) + ' h'] };
@@ -5497,6 +5506,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     }
     it.skill = spec.skill; it.d = spec.d; if (!it.aspect) it.aspect = aspectOf(it);
     it.theme = MP.themeUsed && spec.th && spec.th !== 'szkola' ? spec.th : null;
+    if ((MP.people || []).length && typeof it.prompt === 'string' && /^[a-ząćęłńóśźż]/.test(it.prompt)) it.prompt = it.prompt.charAt(0).toUpperCase() + it.prompt.slice(1); // „babcia Ela miała…” na początku zdania
     return it;
   }
 
@@ -7004,7 +7014,7 @@ var MP = window.MP;
   }
   let PEND = null, DIRTY = false; // zapis dziecka jest właśnie pobierany z konta – do tego czasu nie nadpisujemy konta starszym/pustym stanem
   const save = () => { if (S && CID) { if (PEND === CID) { DIRTY = true; MP.store.saveLocal(S, CID); } else MP.store.save(S, CID); syncIdxEntry(); } };
-  const applyProfile = () => { MP.interests = (S && S.profile && S.profile.interests) || []; MP.setGrade((S && S.profile && S.profile.grade) || 6); };
+  const applyProfile = () => { MP.interests = (S && S.profile && S.profile.interests) || []; MP.people = (S && S.profile && S.profile.people) || []; MP.setGrade((S && S.profile && S.profile.grade) || 6); };
   function activate(id, quiet) {
     const e = IDX.profiles.find(p => p.id === id); if (!e) return false;
     CID = id; S = MP.store.loadProfile(id);
@@ -7912,13 +7922,13 @@ var MP = window.MP;
       body = '<h1>Ustawienia ogólne</h1><p class="muted">Dotyczą całego konta rodzica i wszystkich dzieci.</p>';
       if (MP.store.auth.configured()) body += '<section class="card sset"><h2>Konto rodzica</h2>' + (who ? '<div class="srow"><div class="st">' + esc(who) + '<small>' + (viaG ? 'Logowanie kontem Google' : 'Logowanie e-mailem i hasłem' + (MP.store.auth.verified() ? ' · adres potwierdzony' : ' · adres niepotwierdzony')) + '</small></div></div>' + (viaG ? '' : '<div class="srow"><div class="st">Hasło<small>Wyślemy link do ustawienia nowego hasła na ' + esc(who) + '.</small></div><button class="btn sm" data-act="pwreset">Zmień hasło</button></div>') + '<div class="srow"><div class="st">Wyloguj z tego urządzenia<small>Postępy zostaną na koncie.</small></div><button class="btn sm" data-act="glogout">Wyloguj</button></div>' : '<div class="srow"><div class="st">Nie zalogowano – postępy są tylko w tej przeglądarce.</div><button class="btn sm pri" data-act="gloginp">Zaloguj się jako rodzic</button></div>') + '</section>';
       body += '<section class="card sset"><h2>PIN rodzica</h2><p class="small muted">PIN chroni panel rodzica, gdy dziecko ćwiczy na Twoim urządzeniu (przycisk „Zakończ naukę” wymaga wtedy PIN-u).</p>' + '<div class="row"><input id="newpin" class="inp" style="max-width:200px;font-size:18px" inputmode="numeric" maxlength="8" placeholder="nowy PIN"><button class="btn sm" data-act="setpin">' + (IDX.pin ? 'Zmień PIN' : 'Ustaw PIN') + '</button>' + (IDX.pin ? '<button class="btn sm ghost" data-act="delpin">Usuń PIN</button>' : '') + '</div>' + '</section>';
-      body += '<section class="card sset"><h2>Prywatność</h2><p>Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar, zainteresowania i postępy w nauce. Bez reklam, bez śledzenia, bez danych osobowych.</p></section>';
+      body += '<section class="card sset"><h2>Prywatność</h2><p>Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar, zainteresowania, imiona bliskich osób do zadań (jeśli je wpiszecie – bez nazwisk) i postępy w nauce. Bez reklam, bez śledzenia, bez danych osobowych.</p></section>';
       body += aboutHTML();
     } else {
       const pr = IDX.profiles.find(x => x.id === tab); if (!pr) { view.tab = 'og'; return vPSettings(); }
       ensureDraft();
       body = '<div class="row" style="gap:12px;flex-wrap:nowrap;margin-bottom:6px">' + MP.avatar.svg(pr.av, 52) + '<div><h1 style="margin:0">' + esc(pr.name) + '</h1><div class="muted small">Ustawienia tego dziecka</div></div><span style="flex:1"></span><button class="btn sm" data-pkid="' + pr.id + '">Zobacz postępy →</button></div>';
-      body += '<section class="card sset"><h2>Profil</h2>' + nameBlock() + '<h3 style="margin-top:16px">Klasa</h3><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '<h3 style="margin-top:16px">Awatar</h3>' + avatarBlock() + '<h3 style="margin-top:16px">Pomocnik</h3>' + helperBlock() + '<h3 style="margin-top:16px">Zainteresowania</h3><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p><div class="bar2"><button class="btn pri" data-act="saveprof">Zapisz profil</button></div></section>';
+      body += '<section class="card sset"><h2>Profil</h2>' + nameBlock() + '<h3 style="margin-top:16px">Klasa</h3><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '<h3 style="margin-top:16px">Awatar</h3>' + avatarBlock() + '<h3 style="margin-top:16px">Pomocnik</h3>' + helperBlock() + '<h3 style="margin-top:16px">Zainteresowania</h3><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p><h3 style="margin-top:16px">Bliskie osoby w zadaniach</h3>' + peopleBlock() + '<div class="bar2"><button class="btn pri" data-act="saveprof">Zapisz profil</button></div></section>';
       if (MP.store.who()) body += '<section class="card sset" id="sec-login"><h2>Logowanie dziecka</h2>' + (pr.email && linkOpen !== pr.id ? '<div class="srow"><div class="st">Konto Google: ' + esc(pr.email) + '<small>' + esc(pr.name) + ' loguje się samo: „Jestem uczniem” → „Zaloguj się jako uczeń”.</small></div><button class="btn sm" data-plink="' + pr.id + '">Zmień</button><button class="btn sm ghost" data-punlink="' + pr.id + '">Odłącz</button></div>' : (linkOpen === pr.id || !pr.email ? linkForm(pr) : '')) + (linkDone === pr.id ? '<div class="fb ok" role="status"><b>Konto dziecka zostało połączone. Może już zalogować się do aplikacji.</b></div>' : '') + '</section>';
       body += kidSettingsLearnHTML();
       body += '<section class="card sset dzone"><h2>Usuwanie</h2><div class="srow"><div class="st">Usuń konto dziecka<small>Usuwa profil, wszystkie postępy' + (pr.email ? ' i połączenie z kontem Google' : '') + '. Tego nie da się cofnąć.</small></div><button class="btn sm danger" data-pdel="' + pr.id + '">Usuń konto</button></div></section>';
@@ -7994,7 +8004,7 @@ var MP = window.MP;
   }
 
   // ---------- PROFIL: imię, awatar, zainteresowania ----------
-  function ensureDraft() { if (!draft) { const P = (view.name === 'onboard' && view.isNew) || !S ? {} : (S.profile || {}); draft = { name: P.name || '', grade: P.grade || null, av: Object.assign({}, MP.avatar.DEF, P.av || MP.avatar.random()), interests: (P.interests || []).slice(), helper: MP.helpers.id(P.helper) }; } return draft; }
+  function ensureDraft() { if (!draft) { const P = (view.name === 'onboard' && view.isNew) || !S ? {} : (S.profile || {}); draft = { name: P.name || '', grade: P.grade || null, av: Object.assign({}, MP.avatar.DEF, P.av || MP.avatar.random()), interests: (P.interests || []).slice(), helper: MP.helpers.id(P.helper), people: (P.people || []).map(x => Object.assign({}, x)) }; } return draft; }
   function nameBlock() { return '<label for="nm" class="small muted">Imię albo ksywka (wystarczy samo imię)</label><input id="nm" class="inp" maxlength="20" autocomplete="off" value="' + esc(draft.name) + '" placeholder="np. Kuba">'; }
   function avatarBlock() {
     const A = MP.avatar, av = draft.av;
@@ -8037,7 +8047,7 @@ var MP = window.MP;
     if (st === 1) h += '<h1>Do której klasy chodzisz' + (draft.name ? ', ' + esc(draft.name) : '') + '?</h1><p class="muted">Dobiorę materiał do Twojej klasy. Zawsze możesz to zmienić w profilu.</p>' + gradeBlock() + '<div class="bar2"><button class="btn" data-ob="0">← Wstecz</button><button class="btn pri" data-ob="2">Dalej →</button></div>';
     if (st === 2) h += '<h1>Zrób swój awatar</h1><p class="muted">Wybierz kolory, fryzurę i dodatki. Zawsze możesz to zmienić później.</p>' + avatarBlock() + '<div class="bar2"><button class="btn" data-ob="1">← Wstecz</button><button class="btn pri" data-ob="3">Dalej →</button></div>';
     if (st === 3) h += '<h1>Wybierz swojego pomocnika</h1><p class="muted">Pomocnik będzie z Tobą w czasie nauki: powie, czy odpowiedź jest dobra, pocieszy, gdy coś nie wyjdzie, i podpowie, gdy poprosisz o wskazówkę. Możesz go później zmienić w ustawieniach.</p>' + helperBlock() + '<div class="bar2"><button class="btn" data-ob="2">← Wstecz</button><button class="btn pri" data-ob="4">Dalej →</button></div>';
-    if (st === 4) h += '<h1>Co Cię interesuje?</h1><p>Zaznacz tyle tematów, ile chcesz (najlepiej co najmniej 3). Zadania z treścią będą o tym, co lubisz – np. o rakietach, rybach albo meczach.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">' + (draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.') + '</p><div class="bar2"><button class="btn" data-ob="3">← Wstecz</button><button class="btn pri" data-ob="done">Gotowe – zaczynamy!</button></div>';
+    if (st === 4) h += '<h1>Co Cię interesuje?</h1><p>Zaznacz tyle tematów, ile chcesz (najlepiej co najmniej 3). Zadania z treścią będą o tym, co lubisz – np. o rakietach, rybach albo meczach.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">' + (draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.') + '</p>' + peopleBlock(true) + '<div class="bar2"><button class="btn" data-ob="3">← Wstecz</button><button class="btn pri" data-ob="done">Gotowe – zaczynamy!</button></div>';
     return h + '</section></div>';
   }
   function vProfil() {
@@ -8052,6 +8062,7 @@ var MP = window.MP;
       '<section class="card sset"><h2>Imię lub ksywka</h2>' + nameBlock() + '</section>' +
       '<section class="card sset"><h2>Mój pomocnik</h2><p class="muted small">Pomocnik mówi Ci, czy odpowiedź jest dobra, i podpowiada. Wybór zapisuje się od razu.</p>' + helperBlock() + '</section>' +
       '<section class="card sset"><h2>Zainteresowania</h2><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p></section>' +
+      '<section class="card sset"><h2>Bliskie osoby w zadaniach</h2>' + peopleBlock() + '</section>' +
       (local ? '<section class="card sset"><h2>Klasa</h2><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '</section>' : '<section class="card sset"><h2>Klasa</h2><p>' + (MP.GRADES[S.profile.grade] ? MP.GRADES[S.profile.grade].name : '') + '</p><p class="muted small">Klasę zmienia rodzic w swoich ustawieniach.</p></section>') +
       '<div class="bar2" style="margin:0 0 16px"><button class="btn pri" data-act="saveprof">Zapisz zmiany</button><button class="btn" data-act="cancelprof">Anuluj</button></div>' +
       '<section class="card sset"><h2>Konto</h2>' + acct + '</section></div>';
@@ -8061,13 +8072,32 @@ var MP = window.MP;
     const nm = document.getElementById('nm');
     if (nm) { nm.addEventListener('input', () => { draft.name = nm.value; }); nm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && view.name === 'onboard') { e.preventDefault(); obGo('1'); } }); if (view.name === 'onboard') nm.focus(); }
   }
+  // bliskie osoby: tylko imiona/ksywki (bez nazwisk), do zadań z treścią
+  const ROLEW = /^(pies|piesek|kot|kotek|chomik|świnka|królik|papuga|rybka|konik|żółw|ciocia|ciotka|wujek|babcia|dziadek|brat|siostra|kuzyn|kuzynka|pani|pan|mama|tata)$/i;
+  function cleanPerson(raw) {
+    const t = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (!t) return { err: 'Wpisz imię.' };
+    if (t.length > 20 || /[0-9@#$%&*+=_/\\<>"]/.test(t)) return { err: 'Wpisz samo imię lub ksywkę – bez nazwiska, cyfr i znaków.' };
+    if (!/^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż' -]+$/.test(t)) return { err: 'Imię może mieć tylko litery.' };
+    const w = t.split(' ');
+    if (w.length > 2 || (w.length === 2 && !ROLEW.test(w[0]))) return { err: 'Wystarczy samo imię, bez nazwiska (można np. „babcia Ela” albo „pies Burek”).' };
+    const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+    return { n: w.length === 2 ? w[0].toLowerCase() + ' ' + cap(w[1]) : cap(t) }; // „babcia Ela” – wielka litera na początku zdania dodaje generator
+  }
+  function peopleBlock(onb) {
+    const P = draft.people || (draft.people = []);
+    return (onb ? '<h2 style="margin-top:18px">Kogo lubisz? <span class="small muted" style="font-weight:400">(nieobowiązkowe)</span></h2>' : '') +
+      '<p class="muted small">' + (onb ? 'Wpisz imiona bliskich osób – rodzeństwa, przyjaciół, a nawet zwierzaka. Czasem pojawią się w zadaniach z treścią.' : 'Imiona bliskich osób czasem pojawiają się w zadaniach z treścią (zawsze w miłych sytuacjach).') + ' Tylko imię lub ksywka, bez nazwisk.</p>' +
+      '<div class="ppl">' + P.map((x, i) => '<span class="pchip">' + esc(x.n) + ' <small>(' + (x.g === 'f' ? 'ona' : 'on') + ')</small><button type="button" data-pdelp="' + i + '" aria-label="Usuń ' + esc(x.n) + '">×</button></span>').join('') + '</div>' +
+      (P.length < 8 ? '<div class="row" style="margin-top:8px"><input id="pnm" class="inp" maxlength="20" autocomplete="off" placeholder="np. Kuba, babcia Ela" style="flex:1;min-width:160px"><button type="button" class="btn sm" data-padd="m">+ on</button><button type="button" class="btn sm" data-padd="f">+ ona</button></div>' : '<p class="small muted">To już 8 osób – wystarczy.</p>');
+  }
   function cleanName(n) { return String(n || '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20); }
   function obGo(to) {
     if (to === '1' && !cleanName(draft.name)) { toast('Wpisz imię albo ksywkę – wystarczy jedno słowo.'); return; }
     if (to === '2' && !draft.grade) { toast('Wybierz klasę.'); return; }
     if (to === 'done') {
       if (!draft.interests.length) { toast('Wybierz przynajmniej jeden temat.'); return; }
-      const prof = { name: cleanName(draft.name), grade: +draft.grade, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper) };
+      const prof = { name: cleanName(draft.name), grade: +draft.grade, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper), people: (draft.people || []).slice() };
       if (view.isNew || !S) {
         const id = MP.store.newId();
         IDX.profiles.push(Object.assign({ id, created: now(), updated: now() }, prof)); MP.store.saveIndex(IDX);
@@ -8150,8 +8180,10 @@ var MP = window.MP;
     if (d.helper) { draft.helper = d.helper; if (view.name === 'profil' && S && S.profile) { S.profile.helper = d.helper; save(); toast('Twój pomocnik: ' + esc(MP.helpers.C[d.helper].name) + ' 👋', 2000); } return rerenderProfile(); }
     if (d.int) { const i = draft.interests.indexOf(d.int); if (i >= 0) draft.interests.splice(i, 1); else draft.interests.push(d.int); b.setAttribute('aria-pressed', i < 0); const m = document.getElementById('intmsg'); if (m) m.textContent = draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.'; return; }
     if (d.act === 'avrand') { draft.av = MP.avatar.random(); return rerenderProfile(); }
-    if (d.act === 'saveprof') { if (!cleanName(draft.name)) return toast('Wpisz imię.'); if (!draft.interests.length) return toast('Wybierz przynajmniej jeden temat.'); S.profile = { name: cleanName(draft.name), grade: +draft.grade || S.profile.grade || 6, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper) }; draft = null; applyProfile(); save(); toast('Zapisano.'); return render(); }
+    if (d.act === 'saveprof') { if (!cleanName(draft.name)) return toast('Wpisz imię.'); if (!draft.interests.length) return toast('Wybierz przynajmniej jeden temat.'); S.profile = { name: cleanName(draft.name), grade: +draft.grade || S.profile.grade || 6, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper), people: (draft.people || []).slice() }; draft = null; applyProfile(); save(); toast('Zapisano.'); return render(); }
     if (d.act === 'cancelprof') { draft = null; return go('start'); }
+    if (d.padd) { const inp = document.getElementById('pnm'); const c = cleanPerson(inp && inp.value); if (c.err) { toast(c.err); return; } ensureDraft(); draft.people = draft.people || []; if (draft.people.some(x => x.n.toLowerCase() === c.n.toLowerCase())) { toast('To imię już jest na liście.'); return; } draft.people.push({ n: c.n, g: d.padd === 'f' ? 'f' : 'm' }); rerenderProfile(); const ni = document.getElementById('pnm'); if (ni) ni.focus(); return; }
+    if (d.pdelp !== undefined) { ensureDraft(); (draft.people || []).splice(+d.pdelp, 1); return rerenderProfile(); }
     if (d.go2) return go(d.go2);
     if (d.dzial) return go('dzial', { id: d.dzial });
     if (d.topicgo || d.topic) return go('topic', { id: d.topicgo || d.topic });
