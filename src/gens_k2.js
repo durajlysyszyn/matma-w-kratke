@@ -240,7 +240,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią', grade: 2, mainCode: 'read', prereq: ['k2_add', 'k2_sub'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const th = MP.th(), T = th.k2t || MP.THEMES.szkola.k2t, [nm, g] = r.pick(KIDS);
+      const th = MP.th(), T = th.k2t || MP.THEMES.szkola.k2t, [nm, g] = MP.pickKid(r, KIDS);
       const t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       const op = d === 3 ? r.pick(['mul', 'div']) : r.pick(['add', 'sub']);
       if (op === 'add') { const a = d === 1 ? r.int(5, 30) : r.int(15, 60), b = d === 1 ? r.int(2, 9) : r.int(11, 35); const s = a + b;

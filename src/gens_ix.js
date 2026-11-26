@@ -80,7 +80,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
   });
   // zadanie tekstowe: wybór danych potrzebnych do rozwiązania (transfer)
   add('fr_add_diff', 'multisel', [3], (r) => {
-    const [a, b, c, dd] = pickPair(r, 2); const T = MP.th(); const nm = r.pick(['Ola', 'Kuba', 'Zosia', 'Antek']);
+    const [a, b, c, dd] = pickPair(r, 2); const T = MP.th(); const nm = MP.pickKid(r, [['Ola', 'f'], ['Kuba', 'm'], ['Zosia', 'f'], ['Antek', 'm']])[0];
     const opts = ['rano: ' + fr(a, b) + ' h', 'po południu: ' + fr(c, dd) + ' h', 'cena biletu: ' + r.int(8, 25) + ' zł', 'liczba osób: ' + r.int(3, 9)];
     return { type: 'multisel', aspect: 'transfer', prompt: nm + ' w sobotę ćwiczy dwa razy: rano ' + fr(a, b) + ' godziny, a po południu ' + fr(c, dd) + ' godziny. Na basen jedzie z kolegami (' + opts[3].split(': ')[1] + ' osób), bilet kosztuje ' + opts[2].split(': ')[1] + '. <b>Ile godzin ćwiczy razem w sobotę?</b> Zaznacz tylko dane potrzebne do odpowiedzi na to pytanie.', opts, answer: { kind: 'multisel', set: [0, 1] }, extraCode: 'read', missCode: 'read', selHint: 'Zaznacz dane potrzebne do obliczenia odpowiedzi (dotknij, żeby zaznaczyć lub odznaczyć).',
       hints: ['O co pyta zadanie? O łączny czas ćwiczeń.', 'Cena biletu i liczba osób nie mówią nic o czasie.', 'Potrzebne są oba czasy: rano i po południu – potem je dodasz.'], sol: ['Potrzebne: ' + fr(a, b) + ' h i ' + fr(c, dd) + ' h', 'Razem: ' + fr(a, b) + ' + ' + fr(c, dd) + ' = ' + fs(U.add(F(a, b), F(c, dd))) + ' h'] };

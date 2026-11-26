@@ -144,13 +144,13 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią do 20', grade: 1, mainCode: 'op_confuse', prereq: ['k1_add', 'k1_sub'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns(), [nm, g] = r.pick(KIDS), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      const T = nouns(), [nm, g] = MP.pickKid(r, KIDS), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       const op = d === 1 ? 'add' : d === 2 ? r.pick(['add', 'sub']) : r.pick(['sub', 'cmp']);
       if (op === 'add') { const a = r.int(2, d === 1 ? 7 : 12), b = r.int(2, (d === 1 ? 10 : 20) - a); const s = a + b;
         return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Dostał', 'Dostała') + ' jeszcze ' + t(b) + '. Ile ' + T[2] + ' ma teraz?', value: N(s), wrong: [{ v: N(Math.abs(a - b)), code: 'op_confuse' }, { v: N(s + 1), code: 'calc' }], hints: ['Czy teraz ma więcej, czy mniej? Więcej – dodajemy.', 'Działanie: ' + a + ' + ' + b + '.', 'Możesz narysować kółka i je policzyć.'], sol: [a + ' + ' + b + ' = ' + s, 'Odpowiedź: ' + nm + ' ma ' + t(s) + '.'] }; }
       if (op === 'sub') { const a = r.int(8, 20), b = r.int(2, a - 2); const v = a - b;
         return { prompt: nm + ' ' + vg(g, 'miał', 'miała') + ' ' + t(a) + '. ' + vg(g, 'Oddał', 'Oddała') + ' ' + t(b) + '. Ile ' + T[2] + ' ' + vg(g, 'mu', 'jej') + ' zostało?', value: N(v), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(v + 1), code: 'calc' }], hints: ['Zostało więcej czy mniej? Mniej – odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Sprawdź: wynik + ' + b + ' = ' + a + '?'], sol: [a + ' − ' + b + ' = ' + v, 'Odpowiedź: zostało ' + t(v) + '.'] }; }
-      const [nm2] = r.pick(KIDS.filter(k => k[0] !== nm)); const a = r.int(9, 20), b = r.int(2, a - 2);
+      const [nm2] = MP.pickKid(r, KIDS, nm); const a = r.int(9, 20), b = r.int(2, a - 2);
       return { prompt: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + t(b) + '. O ile więcej ' + T[2] + ' ma ' + nm + '?', value: N(a - b), wrong: [{ v: N(a + b), code: 'op_confuse' }, { v: N(a), code: 'read' }], hints: ['„O ile więcej" – sprawdzamy różnicę, czyli odejmujemy.', 'Działanie: ' + a + ' − ' + b + '.', 'Ile trzeba dodać do ' + b + ', żeby było ' + a + '?'], sol: [a + ' − ' + b + ' = ' + (a - b), 'Odpowiedź: o ' + (a - b) + '.'] };
     }
   });
@@ -292,12 +292,12 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     name: 'Zadania z treścią (jedno- i dwudziałaniowe)', grade: 3, mainCode: 'read', prereq: ['k3_add', 'tabl'],
     types: { 1: ['input', 'choice'], 2: ['input', 'choice'], 3: ['input', 'choice'] },
     gen(r, d) {
-      const T = nouns(), [nm, g] = r.pick(KIDS), [nm2] = r.pick(KIDS.filter(k => k[0] !== nm)), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
+      const T = nouns(), [nm, g] = MP.pickKid(r, KIDS), [nm2] = MP.pickKid(r, KIDS, nm), t = (n) => n + ' ' + pl(n, T[0], T[1], T[2]);
       if (d === 1) { const b = r.int(3, 9), k = r.int(2, 6), a = b * k;
         if (r.chance(0.5)) return { prompt: nm + ' ma ' + t(a) + ', a ' + nm2 + ' – ' + t(b) + '. Ile razy więcej ' + T[2] + ' ma ' + nm + '?', value: N(k), wrong: [{ v: N(a - b), code: 'k3_times' }, { v: N(a + b), code: 'op_confuse' }], hints: ['„Ile razy więcej" – dzielimy większą liczbę przez mniejszą.', 'Działanie: ' + a + ' : ' + b + '.', 'Ile razy ' + b + ' mieści się w ' + a + '?'], sol: [a + ' : ' + b + ' = ' + k, 'Odpowiedź: ' + k + ' razy więcej.'] };
         return { prompt: nm + ' ma ' + t(b) + ', a ' + nm2 + ' ma ' + k + ' razy więcej. Ile ' + T[2] + ' ma ' + nm2 + '?', value: N(a), wrong: [{ v: N(b + k), code: 'k3_times' }, { v: N(b), code: 'read' }], hints: ['„' + k + ' razy więcej" – mnożymy.', 'Działanie: ' + b + ' · ' + k + '.', 'Policz z tabliczki mnożenia.'], sol: [b + ' · ' + k + ' = ' + a, 'Odpowiedź: ' + nm2 + ' ma ' + t(a) + '.'] }; }
       if (d === 2) { const n = r.int(3, 8), p = r.int(3, 9), extra = r.int(5, 30);
-        return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' paczek po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ' i jeszcze ' + t(extra) + ' osobno. Ile ' + T[2] + ' ' + vg(g, 'kupił', 'kupiła') + ' razem?', value: N(n * p + extra), wrong: [{ v: N(n + p + extra), code: 'op_confuse' }, { v: N(n * p), code: 'read' }, { v: N(n * (p + extra)), code: 'order_ltr' }], hints: ['Najpierw policz, ile jest w paczkach.', n + ' · ' + p + ' = ' + n * p + '.', 'Dodaj te osobno: ' + n * p + ' + ' + extra + '.'], sol: [n + ' · ' + p + ' = ' + n * p, n * p + ' + ' + extra + ' = ' + (n * p + extra), 'Odpowiedź: razem ' + t(n * p + extra) + '.'] }; }
+        return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, 'paczkę', 'paczki', 'paczek') + ' po ' + p + ' ' + pl(p, T[0], T[1], T[2]) + ' i jeszcze ' + t(extra) + ' osobno. Ile ' + T[2] + ' ' + vg(g, 'kupił', 'kupiła') + ' razem?', value: N(n * p + extra), wrong: [{ v: N(n + p + extra), code: 'op_confuse' }, { v: N(n * p), code: 'read' }, { v: N(n * (p + extra)), code: 'order_ltr' }], hints: ['Najpierw policz, ile jest w paczkach.', n + ' · ' + p + ' = ' + n * p + '.', 'Dodaj te osobno: ' + n * p + ' + ' + extra + '.'], sol: [n + ' · ' + p + ' = ' + n * p, n * p + ' + ' + extra + ' = ' + (n * p + extra), 'Odpowiedź: razem ' + t(n * p + extra) + '.'] }; }
       const price = r.int(3, 9), n = r.int(2, 6), pay = [20, 50, 100].find(x => x > price * n);
       return { prompt: nm + ' ' + vg(g, 'kupił', 'kupiła') + ' ' + n + ' ' + pl(n, T[0], T[1], T[2]) + ' po ' + price + ' zł. ' + vg(g, 'Zapłacił', 'Zapłaciła') + ' banknotem ' + pay + ' zł. Ile reszty ' + vg(g, 'dostał', 'dostała') + '?', value: N(pay - n * price), wrong: [{ v: N(pay - n - price), code: 'op_confuse' }, { v: N(n * price), code: 'read' }, { v: N(pay - price), code: 'read' }], hints: ['Najpierw: ile kosztowały wszystkie?', n + ' · ' + price + ' = ' + n * price + ' zł.', 'Reszta: ' + pay + ' − ' + n * price + '.'], sol: [n + ' · ' + price + ' = ' + n * price + ' zł', pay + ' − ' + n * price + ' = ' + (pay - n * price) + ' zł', 'Odpowiedź: ' + (pay - n * price) + ' zł reszty.'] };
     }

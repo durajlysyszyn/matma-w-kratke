@@ -262,6 +262,7 @@ var MP = (typeof window !== 'undefined' ? window : globalThis).MP;
     }
     it.skill = spec.skill; it.d = spec.d; if (!it.aspect) it.aspect = aspectOf(it);
     it.theme = MP.themeUsed && spec.th && spec.th !== 'szkola' ? spec.th : null;
+    if ((MP.people || []).length && typeof it.prompt === 'string' && /^[a-ząćęłńóśźż]/.test(it.prompt)) it.prompt = it.prompt.charAt(0).toUpperCase() + it.prompt.slice(1); // „babcia Ela miała…” na początku zdania
     return it;
   }
 

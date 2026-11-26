@@ -17,7 +17,7 @@
   }
   let PEND = null, DIRTY = false; // zapis dziecka jest właśnie pobierany z konta – do tego czasu nie nadpisujemy konta starszym/pustym stanem
   const save = () => { if (S && CID) { if (PEND === CID) { DIRTY = true; MP.store.saveLocal(S, CID); } else MP.store.save(S, CID); syncIdxEntry(); } };
-  const applyProfile = () => { MP.interests = (S && S.profile && S.profile.interests) || []; MP.setGrade((S && S.profile && S.profile.grade) || 6); };
+  const applyProfile = () => { MP.interests = (S && S.profile && S.profile.interests) || []; MP.people = (S && S.profile && S.profile.people) || []; MP.setGrade((S && S.profile && S.profile.grade) || 6); };
   function activate(id, quiet) {
     const e = IDX.profiles.find(p => p.id === id); if (!e) return false;
     CID = id; S = MP.store.loadProfile(id);
@@ -925,13 +925,13 @@
       body = '<h1>Ustawienia ogólne</h1><p class="muted">Dotyczą całego konta rodzica i wszystkich dzieci.</p>';
       if (MP.store.auth.configured()) body += '<section class="card sset"><h2>Konto rodzica</h2>' + (who ? '<div class="srow"><div class="st">' + esc(who) + '<small>' + (viaG ? 'Logowanie kontem Google' : 'Logowanie e-mailem i hasłem' + (MP.store.auth.verified() ? ' · adres potwierdzony' : ' · adres niepotwierdzony')) + '</small></div></div>' + (viaG ? '' : '<div class="srow"><div class="st">Hasło<small>Wyślemy link do ustawienia nowego hasła na ' + esc(who) + '.</small></div><button class="btn sm" data-act="pwreset">Zmień hasło</button></div>') + '<div class="srow"><div class="st">Wyloguj z tego urządzenia<small>Postępy zostaną na koncie.</small></div><button class="btn sm" data-act="glogout">Wyloguj</button></div>' : '<div class="srow"><div class="st">Nie zalogowano – postępy są tylko w tej przeglądarce.</div><button class="btn sm pri" data-act="gloginp">Zaloguj się jako rodzic</button></div>') + '</section>';
       body += '<section class="card sset"><h2>PIN rodzica</h2><p class="small muted">PIN chroni panel rodzica, gdy dziecko ćwiczy na Twoim urządzeniu (przycisk „Zakończ naukę” wymaga wtedy PIN-u).</p>' + '<div class="row"><input id="newpin" class="inp" style="max-width:200px;font-size:18px" inputmode="numeric" maxlength="8" placeholder="nowy PIN"><button class="btn sm" data-act="setpin">' + (IDX.pin ? 'Zmień PIN' : 'Ustaw PIN') + '</button>' + (IDX.pin ? '<button class="btn sm ghost" data-act="delpin">Usuń PIN</button>' : '') + '</div>' + '</section>';
-      body += '<section class="card sset"><h2>Prywatność</h2><p>Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar, zainteresowania i postępy w nauce. Bez reklam, bez śledzenia, bez danych osobowych.</p></section>';
+      body += '<section class="card sset"><h2>Prywatność</h2><p>Aplikacja zapisuje tylko imię lub ksywkę dziecka, klasę, awatar, zainteresowania, imiona bliskich osób do zadań (jeśli je wpiszecie – bez nazwisk) i postępy w nauce. Bez reklam, bez śledzenia, bez danych osobowych.</p></section>';
       body += aboutHTML();
     } else {
       const pr = IDX.profiles.find(x => x.id === tab); if (!pr) { view.tab = 'og'; return vPSettings(); }
       ensureDraft();
       body = '<div class="row" style="gap:12px;flex-wrap:nowrap;margin-bottom:6px">' + MP.avatar.svg(pr.av, 52) + '<div><h1 style="margin:0">' + esc(pr.name) + '</h1><div class="muted small">Ustawienia tego dziecka</div></div><span style="flex:1"></span><button class="btn sm" data-pkid="' + pr.id + '">Zobacz postępy →</button></div>';
-      body += '<section class="card sset"><h2>Profil</h2>' + nameBlock() + '<h3 style="margin-top:16px">Klasa</h3><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '<h3 style="margin-top:16px">Awatar</h3>' + avatarBlock() + '<h3 style="margin-top:16px">Pomocnik</h3>' + helperBlock() + '<h3 style="margin-top:16px">Zainteresowania</h3><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p><div class="bar2"><button class="btn pri" data-act="saveprof">Zapisz profil</button></div></section>';
+      body += '<section class="card sset"><h2>Profil</h2>' + nameBlock() + '<h3 style="margin-top:16px">Klasa</h3><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '<h3 style="margin-top:16px">Awatar</h3>' + avatarBlock() + '<h3 style="margin-top:16px">Pomocnik</h3>' + helperBlock() + '<h3 style="margin-top:16px">Zainteresowania</h3><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p><h3 style="margin-top:16px">Bliskie osoby w zadaniach</h3>' + peopleBlock() + '<div class="bar2"><button class="btn pri" data-act="saveprof">Zapisz profil</button></div></section>';
       if (MP.store.who()) body += '<section class="card sset" id="sec-login"><h2>Logowanie dziecka</h2>' + (pr.email && linkOpen !== pr.id ? '<div class="srow"><div class="st">Konto Google: ' + esc(pr.email) + '<small>' + esc(pr.name) + ' loguje się samo: „Jestem uczniem” → „Zaloguj się jako uczeń”.</small></div><button class="btn sm" data-plink="' + pr.id + '">Zmień</button><button class="btn sm ghost" data-punlink="' + pr.id + '">Odłącz</button></div>' : (linkOpen === pr.id || !pr.email ? linkForm(pr) : '')) + (linkDone === pr.id ? '<div class="fb ok" role="status"><b>Konto dziecka zostało połączone. Może już zalogować się do aplikacji.</b></div>' : '') + '</section>';
       body += kidSettingsLearnHTML();
       body += '<section class="card sset dzone"><h2>Usuwanie</h2><div class="srow"><div class="st">Usuń konto dziecka<small>Usuwa profil, wszystkie postępy' + (pr.email ? ' i połączenie z kontem Google' : '') + '. Tego nie da się cofnąć.</small></div><button class="btn sm danger" data-pdel="' + pr.id + '">Usuń konto</button></div></section>';
@@ -1007,7 +1007,7 @@
   }
 
   // ---------- PROFIL: imię, awatar, zainteresowania ----------
-  function ensureDraft() { if (!draft) { const P = (view.name === 'onboard' && view.isNew) || !S ? {} : (S.profile || {}); draft = { name: P.name || '', grade: P.grade || null, av: Object.assign({}, MP.avatar.DEF, P.av || MP.avatar.random()), interests: (P.interests || []).slice(), helper: MP.helpers.id(P.helper) }; } return draft; }
+  function ensureDraft() { if (!draft) { const P = (view.name === 'onboard' && view.isNew) || !S ? {} : (S.profile || {}); draft = { name: P.name || '', grade: P.grade || null, av: Object.assign({}, MP.avatar.DEF, P.av || MP.avatar.random()), interests: (P.interests || []).slice(), helper: MP.helpers.id(P.helper), people: (P.people || []).map(x => Object.assign({}, x)) }; } return draft; }
   function nameBlock() { return '<label for="nm" class="small muted">Imię albo ksywka (wystarczy samo imię)</label><input id="nm" class="inp" maxlength="20" autocomplete="off" value="' + esc(draft.name) + '" placeholder="np. Kuba">'; }
   function avatarBlock() {
     const A = MP.avatar, av = draft.av;
@@ -1050,7 +1050,7 @@
     if (st === 1) h += '<h1>Do której klasy chodzisz' + (draft.name ? ', ' + esc(draft.name) : '') + '?</h1><p class="muted">Dobiorę materiał do Twojej klasy. Zawsze możesz to zmienić w profilu.</p>' + gradeBlock() + '<div class="bar2"><button class="btn" data-ob="0">← Wstecz</button><button class="btn pri" data-ob="2">Dalej →</button></div>';
     if (st === 2) h += '<h1>Zrób swój awatar</h1><p class="muted">Wybierz kolory, fryzurę i dodatki. Zawsze możesz to zmienić później.</p>' + avatarBlock() + '<div class="bar2"><button class="btn" data-ob="1">← Wstecz</button><button class="btn pri" data-ob="3">Dalej →</button></div>';
     if (st === 3) h += '<h1>Wybierz swojego pomocnika</h1><p class="muted">Pomocnik będzie z Tobą w czasie nauki: powie, czy odpowiedź jest dobra, pocieszy, gdy coś nie wyjdzie, i podpowie, gdy poprosisz o wskazówkę. Możesz go później zmienić w ustawieniach.</p>' + helperBlock() + '<div class="bar2"><button class="btn" data-ob="2">← Wstecz</button><button class="btn pri" data-ob="4">Dalej →</button></div>';
-    if (st === 4) h += '<h1>Co Cię interesuje?</h1><p>Zaznacz tyle tematów, ile chcesz (najlepiej co najmniej 3). Zadania z treścią będą o tym, co lubisz – np. o rakietach, rybach albo meczach.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">' + (draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.') + '</p><div class="bar2"><button class="btn" data-ob="3">← Wstecz</button><button class="btn pri" data-ob="done">Gotowe – zaczynamy!</button></div>';
+    if (st === 4) h += '<h1>Co Cię interesuje?</h1><p>Zaznacz tyle tematów, ile chcesz (najlepiej co najmniej 3). Zadania z treścią będą o tym, co lubisz – np. o rakietach, rybach albo meczach.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">' + (draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.') + '</p>' + peopleBlock(true) + '<div class="bar2"><button class="btn" data-ob="3">← Wstecz</button><button class="btn pri" data-ob="done">Gotowe – zaczynamy!</button></div>';
     return h + '</section></div>';
   }
   function vProfil() {
@@ -1065,6 +1065,7 @@
       '<section class="card sset"><h2>Imię lub ksywka</h2>' + nameBlock() + '</section>' +
       '<section class="card sset"><h2>Mój pomocnik</h2><p class="muted small">Pomocnik mówi Ci, czy odpowiedź jest dobra, i podpowiada. Wybór zapisuje się od razu.</p>' + helperBlock() + '</section>' +
       '<section class="card sset"><h2>Zainteresowania</h2><p class="muted small">Zadania z treścią będą dotyczyć tych tematów.</p>' + interestsBlock() + '<p class="small muted" id="intmsg" style="margin-top:10px">Wybrane: ' + draft.interests.length + '</p></section>' +
+      '<section class="card sset"><h2>Bliskie osoby w zadaniach</h2>' + peopleBlock() + '</section>' +
       (local ? '<section class="card sset"><h2>Klasa</h2><p class="muted small">Zmiana klasy zmienia listę działów. Postępy w umiejętnościach wspólnych dla klas zostają.</p>' + gradeBlock() + '</section>' : '<section class="card sset"><h2>Klasa</h2><p>' + (MP.GRADES[S.profile.grade] ? MP.GRADES[S.profile.grade].name : '') + '</p><p class="muted small">Klasę zmienia rodzic w swoich ustawieniach.</p></section>') +
       '<div class="bar2" style="margin:0 0 16px"><button class="btn pri" data-act="saveprof">Zapisz zmiany</button><button class="btn" data-act="cancelprof">Anuluj</button></div>' +
       '<section class="card sset"><h2>Konto</h2>' + acct + '</section></div>';
@@ -1074,13 +1075,32 @@
     const nm = document.getElementById('nm');
     if (nm) { nm.addEventListener('input', () => { draft.name = nm.value; }); nm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && view.name === 'onboard') { e.preventDefault(); obGo('1'); } }); if (view.name === 'onboard') nm.focus(); }
   }
+  // bliskie osoby: tylko imiona/ksywki (bez nazwisk), do zadań z treścią
+  const ROLEW = /^(pies|piesek|kot|kotek|chomik|świnka|królik|papuga|rybka|konik|żółw|ciocia|ciotka|wujek|babcia|dziadek|brat|siostra|kuzyn|kuzynka|pani|pan|mama|tata)$/i;
+  function cleanPerson(raw) {
+    const t = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (!t) return { err: 'Wpisz imię.' };
+    if (t.length > 20 || /[0-9@#$%&*+=_/\\<>"]/.test(t)) return { err: 'Wpisz samo imię lub ksywkę – bez nazwiska, cyfr i znaków.' };
+    if (!/^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż' -]+$/.test(t)) return { err: 'Imię może mieć tylko litery.' };
+    const w = t.split(' ');
+    if (w.length > 2 || (w.length === 2 && !ROLEW.test(w[0]))) return { err: 'Wystarczy samo imię, bez nazwiska (można np. „babcia Ela” albo „pies Burek”).' };
+    const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+    return { n: w.length === 2 ? w[0].toLowerCase() + ' ' + cap(w[1]) : cap(t) }; // „babcia Ela” – wielka litera na początku zdania dodaje generator
+  }
+  function peopleBlock(onb) {
+    const P = draft.people || (draft.people = []);
+    return (onb ? '<h2 style="margin-top:18px">Kogo lubisz? <span class="small muted" style="font-weight:400">(nieobowiązkowe)</span></h2>' : '') +
+      '<p class="muted small">' + (onb ? 'Wpisz imiona bliskich osób – rodzeństwa, przyjaciół, a nawet zwierzaka. Czasem pojawią się w zadaniach z treścią.' : 'Imiona bliskich osób czasem pojawiają się w zadaniach z treścią (zawsze w miłych sytuacjach).') + ' Tylko imię lub ksywka, bez nazwisk.</p>' +
+      '<div class="ppl">' + P.map((x, i) => '<span class="pchip">' + esc(x.n) + ' <small>(' + (x.g === 'f' ? 'ona' : 'on') + ')</small><button type="button" data-pdelp="' + i + '" aria-label="Usuń ' + esc(x.n) + '">×</button></span>').join('') + '</div>' +
+      (P.length < 8 ? '<div class="row" style="margin-top:8px"><input id="pnm" class="inp" maxlength="20" autocomplete="off" placeholder="np. Kuba, babcia Ela" style="flex:1;min-width:160px"><button type="button" class="btn sm" data-padd="m">+ on</button><button type="button" class="btn sm" data-padd="f">+ ona</button></div>' : '<p class="small muted">To już 8 osób – wystarczy.</p>');
+  }
   function cleanName(n) { return String(n || '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20); }
   function obGo(to) {
     if (to === '1' && !cleanName(draft.name)) { toast('Wpisz imię albo ksywkę – wystarczy jedno słowo.'); return; }
     if (to === '2' && !draft.grade) { toast('Wybierz klasę.'); return; }
     if (to === 'done') {
       if (!draft.interests.length) { toast('Wybierz przynajmniej jeden temat.'); return; }
-      const prof = { name: cleanName(draft.name), grade: +draft.grade, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper) };
+      const prof = { name: cleanName(draft.name), grade: +draft.grade, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper), people: (draft.people || []).slice() };
       if (view.isNew || !S) {
         const id = MP.store.newId();
         IDX.profiles.push(Object.assign({ id, created: now(), updated: now() }, prof)); MP.store.saveIndex(IDX);
@@ -1163,8 +1183,10 @@
     if (d.helper) { draft.helper = d.helper; if (view.name === 'profil' && S && S.profile) { S.profile.helper = d.helper; save(); toast('Twój pomocnik: ' + esc(MP.helpers.C[d.helper].name) + ' 👋', 2000); } return rerenderProfile(); }
     if (d.int) { const i = draft.interests.indexOf(d.int); if (i >= 0) draft.interests.splice(i, 1); else draft.interests.push(d.int); b.setAttribute('aria-pressed', i < 0); const m = document.getElementById('intmsg'); if (m) m.textContent = draft.interests.length ? 'Wybrane: ' + draft.interests.length : 'Nic jeszcze nie wybrano.'; return; }
     if (d.act === 'avrand') { draft.av = MP.avatar.random(); return rerenderProfile(); }
-    if (d.act === 'saveprof') { if (!cleanName(draft.name)) return toast('Wpisz imię.'); if (!draft.interests.length) return toast('Wybierz przynajmniej jeden temat.'); S.profile = { name: cleanName(draft.name), grade: +draft.grade || S.profile.grade || 6, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper) }; draft = null; applyProfile(); save(); toast('Zapisano.'); return render(); }
+    if (d.act === 'saveprof') { if (!cleanName(draft.name)) return toast('Wpisz imię.'); if (!draft.interests.length) return toast('Wybierz przynajmniej jeden temat.'); S.profile = { name: cleanName(draft.name), grade: +draft.grade || S.profile.grade || 6, av: draft.av, interests: draft.interests.slice(), helper: MP.helpers.id(draft.helper), people: (draft.people || []).slice() }; draft = null; applyProfile(); save(); toast('Zapisano.'); return render(); }
     if (d.act === 'cancelprof') { draft = null; return go('start'); }
+    if (d.padd) { const inp = document.getElementById('pnm'); const c = cleanPerson(inp && inp.value); if (c.err) { toast(c.err); return; } ensureDraft(); draft.people = draft.people || []; if (draft.people.some(x => x.n.toLowerCase() === c.n.toLowerCase())) { toast('To imię już jest na liście.'); return; } draft.people.push({ n: c.n, g: d.padd === 'f' ? 'f' : 'm' }); rerenderProfile(); const ni = document.getElementById('pnm'); if (ni) ni.focus(); return; }
+    if (d.pdelp !== undefined) { ensureDraft(); (draft.people || []).splice(+d.pdelp, 1); return rerenderProfile(); }
     if (d.go2) return go(d.go2);
     if (d.dzial) return go('dzial', { id: d.dzial });
     if (d.topicgo || d.topic) return go('topic', { id: d.topicgo || d.topic });
