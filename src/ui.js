@@ -241,9 +241,9 @@
         cells.push('<button class="cell l' + sl + (s && (s.needsReview || E.isDue(s, t)) ? ' rv' : '') + (ks.k === 'locked' ? ' lk' : ks.k === 'stuck' ? ' st' : '') + '" data-topic="' + tp.id + '" data-tip="' + esc(tip + '\n' + SIMPLE[sl] + (ks.k === 'locked' ? '\n🔒 najpierw: ' + skName(ks.root) : ks.k === 'stuck' ? '\nćwiczymy to inaczej' : '') + (s && (s.needsReview || E.isDue(s, t)) ? ' · czeka na powtórkę' : '')) + '" aria-label="' + esc(dz.name + ', ' + skName(id) + ', ' + SIMPLE[sl]) + '"></button>');
       }));
       const dt = E.dzialTest(S, dz);
-      h += '<div class="drow"><button type="button" class="dn" data-dzial="' + dz.id + '" aria-label="Otwórz dział: ' + esc(dz.name) + ' (opanowane ' + dOk + ' z ' + dAll + ')"><span class="dnw"><span class="dnt">' + esc(dz.name) + '</span>' + (dt.passed ? '<span class="dzbadge ok">✓ zaliczony</span>' : dt.ready ? '<span class="dzbadge rd">gotowy do testu</span>' : '') + '</span><span class="arr" aria-hidden="true">›</span><small>' + dOk + '/' + dAll + '</small></button><div class="sq">' + cells.join('') + '</div></div>';
+      h += '<div class="drow"><button type="button" class="dn" data-dzial="' + dz.id + '" aria-label="Otwórz dział: ' + esc(dz.name) + ' (opanowane ' + dOk + ' z ' + dAll + ')"><span class="dnw"><span class="dnt">' + esc(dz.name) + '</span>' + (dt.passed ? '<span class="dzbadge ok">✓ zaliczony</span>' : dt.ready ? '<span class="dzbadge rd">gotowy do testu</span>' : '') + '</span><span class="arr" aria-hidden="true">›</span><small>' + dOk + '/' + dAll + '</small></button><div class="sq">' + cells.join('') + dzGameBtn(dz, dt) + '</div></div>';
     });
-    h += '</div><div class="legend"><span><i style="background:var(--l0)"></i>nowe</span><span><i style="background:var(--l3)"></i>ćwiczę</span><span><i style="background:var(--l5)"></i>opanowane</span><span><i style="outline:2px solid var(--coral)"></i>czeka na powtórkę</span><span><i class="lkl"></i>zablokowane – najpierw podstawy</span></div></section>';
+    h += '</div><div class="legend"><span><i style="background:var(--l0)"></i>nowe</span><span><i style="background:var(--l3)"></i>ćwiczę</span><span><i style="background:var(--l5)"></i>opanowane</span><span><i style="outline:2px solid var(--coral)"></i>czeka na powtórkę</span><span><i class="lkl"></i>zablokowane – najpierw podstawy</span></div>' + dzGamesCount() + '</section>';
     // tydzień jak w kalendarzu: od poniedziałku do niedzieli
     const DN = ['pn', 'wt', 'śr', 'cz', 'pt', 'sb', 'nd'], dow = (new Date(t).getDay() + 6) % 7;
     const cw = DN.map((nm, i) => { const tt = t + (i - dow) * E.DAY, k = E.dayKey(tt); return { nm, k, n: (S.days[k] || {}).n || 0, today: i === dow, fut: i > dow }; });
@@ -377,6 +377,21 @@
       if (sk.length && sk.every(ok)) return { why: 'Temat opanowany', topic: tp.name }; }
     return null;
   }
+  // gry odblokowane na mapie działów: po zdaniu testu działu; domyślnie dostępne po jednej serii zadań danego dnia
+  const gamesOn = () => !!(MP.games && S.settings && S.settings.games !== false);
+  const gameBest = () => { const b = (S.games && S.games.best) || {}; return Math.max(0, ...Object.keys(b).filter(k => k.indexOf('g' + MP.grade + '_') === 0).map(k => b[k])); };
+  const gameAllowedToday = () => S.settings.gameFree || (((S.days || {})[E.dayKey(now())] || {}).n || 0) >= (S.settings.seriesLen || 5);
+  function dzGameBtn(dz, dt) {
+    if (!gamesOn() || !dz.topics.some(tp => tp.skills.some(MP.isReady))) return '';
+    if (!dt.passed) return '<span class="dzgame lk" title="Zdaj test działu, żeby odblokować grę" aria-label="Gra zablokowana – zdaj test działu">🔒🎮</span>';
+    const b = gameBest();
+    return '<button type="button" class="dzgame" data-act="dzgame" aria-label="Zagraj w grę z działu ' + esc(dz.name) + '">🎮' + (b ? ' <small>' + b + '</small>' : '') + '</button>';
+  }
+  function dzGamesCount() {
+    if (!gamesOn()) return '';
+    const all = MP.DZIALY.filter(dz => dz.topics.some(tp => tp.skills.some(MP.isReady))); const un = all.filter(dz => E.dzialTest(S, dz).passed).length;
+    return '<p class="small muted" style="margin:8px 0 0">🎮 Odblokowane gry: <b>' + un + ' z ' + all.length + '</b>' + (un ? ' – kliknij 🎮 przy dziale' + (S.settings.gameFree ? '' : ' (po jednej serii zadań dziennie)') : ' – zdaj test działu, żeby odblokować pierwszą') + '</p>';
+  }
   function vGame() { return '<div class="lesson"><section class="bigcard" id="gamebox"></section></div>'; }
   function afterGameRender() {
     const box = document.getElementById('gamebox'); if (!box) return;
@@ -457,7 +472,7 @@
         let cls = 'opt'; if (examMode && +val === i) cls += ' sel';
         if (!examMode && c && !c.done && c.sel === i) cls += ' sel';
         if (fx && c && c.picked && c.picked.includes(i)) cls += ' sel';
-        else if (!examMode && c && c.picked) { if (c.picked.includes(i)) cls += i === it.answer.correct ? ' right' : ' wrong'; if (c.done && i === it.answer.correct) cls += ' right'; }
+        else if (!fx && !examMode && c && c.picked) { if (c.picked.includes(i)) cls += i === it.answer.correct ? ' right' : ' wrong'; if (c.done && i === it.answer.correct) cls += ' right'; }
         return '<button class="' + cls + '" data-opt="' + i + '" aria-pressed="' + (!examMode && c ? c.sel === i : +val === i) + '"' + (!examMode && c && (c.done || (c.picked || []).includes(i)) ? ' disabled' : '') + '>' + M(o.label) + '</button>';
       }).join('') + '</div>';
     }
@@ -711,6 +726,7 @@
     if (sum.mode === 'repair' && sum.repair) h += '<p>' + (sum.repair.good ? 'Ostatnie zadania poszły samodzielnie i bezbłędnie. Możesz iść dalej.' : 'Ostatnie zadania jeszcze sprawiały kłopot. Zrobimy kolejną rundę – z innym wyjaśnieniem.') + '</p>';
     if (sum.badges && sum.badges.length) h += '<p class="newbadge"><span class="ico">★</span> Nowa odznaka: <b>' + sum.badges.map(esc).join(', ') + '</b></p>';
     if (sum.game && !sum.gameDone && MP.games) h += '<div class="goffer"><p><b>' + esc(sum.game.why) + '! 🎉</b>' + (sum.game.topic ? ' (' + esc(sum.game.topic) + ')' : '') + '<br>W nagrodę możesz zagrać w krótką minigrę – ' + MP.games.DURATION + ' sekund.</p><div class="bar2"><button class="btn pri" data-act="game">Zagram! 🎮</button><button class="btn ghost" data-act="nogame">Nie teraz</button></div></div>';
+    else if (!isTest && gamesOn() && gameAllowedToday() && MP.DZIALY.some(dz => E.dzialTest(S, dz).passed)) h += '<p class="small" style="margin:10px 0">🎮 Seria zrobiona – możesz zagrać w odblokowane gry. Znajdziesz je na mapie działów przy zaliczonych działach.</p>';
     if (isTest) h += answersList(sum.results);
     else {
       h += '<p>Zrobione zadania: <b>' + sum.n + '</b></p>';
@@ -869,7 +885,7 @@
   const linkForm = (pr) => '<form id="linkform" data-id="' + pr.id + '" class="card" style="margin:6px 0 10px;background:var(--paper2,#f6f7fb)"><label for="lem"><b>Adres Gmail / konta Google dziecka (' + esc(pr.name) + ')</b></label><p class="small muted" style="margin:4px 0 8px">Dziecko zaloguje się tym kontem na tej stronie i zobaczy tylko swoje lekcje – bez panelu rodzica i bez innych dzieci. Postępy będą widoczne tutaj.</p><div class="row"><input id="lem" type="email" autocomplete="off" value="' + esc(pr.email || '') + '" placeholder="np. kuba.nowak@gmail.com" style="flex:1;min-width:200px"><button class="btn sm pri" type="submit">Zapisz</button>' + (pr.email ? '<button class="btn sm ghost" type="button" data-punlink="' + pr.id + '">Odłącz konto</button>' : '') + '<button class="btn sm ghost" type="button" data-act="linkcancel">Anuluj</button></div><p class="small" id="lemmsg" role="status"></p></form>';
   function kidSettingsLearnHTML() {
     let h = '';
-    h += '<section class="card" style="margin-top:16px"><h2>Nauka i dane</h2><div class="stack"><label class="row">Zadań w jednej serii: <select id="slen" class="btn sm">' + [3, 5, 8, 10].map(n => '<option' + ((S.settings.seriesLen || 5) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label><p class="small muted" style="margin:-6px 0 0">Po serii dziecko wybiera: jeszcze jedna seria albo koniec. Ile serii potrzeba do opanowania, zależy od tego, jak dziecku idzie.</p><label class="check"><input type="checkbox" id="sgames"' + (S.settings.games !== false ? ' checked' : '') + '><span>Minigra w nagrodę po opanowaniu tematu (40 s, zawsze można pominąć)</span></label><p class="small muted" style="margin:-6px 0 0">Gra ćwiczy materiał z klasy dziecka. <button class="btn sm ghost" data-act="gamedemo">Wypróbuj grę</button></p><label class="check"><input type="checkbox" id="sgrade"' + (S.settings.showGrade ? ' checked' : '') + '><span>Pokazuj orientacyjną ocenę szkolną po próbnym sprawdzianie</span></label>';
+    h += '<section class="card" style="margin-top:16px"><h2>Nauka i dane</h2><div class="stack"><label class="row">Zadań w jednej serii: <select id="slen" class="btn sm">' + [3, 5, 8, 10].map(n => '<option' + ((S.settings.seriesLen || 5) === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label><p class="small muted" style="margin:-6px 0 0">Po serii dziecko wybiera: jeszcze jedna seria albo koniec. Ile serii potrzeba do opanowania, zależy od tego, jak dziecku idzie.</p><label class="check"><input type="checkbox" id="sgames"' + (S.settings.games !== false ? ' checked' : '') + '><span>Minigra w nagrodę po opanowaniu tematu (40 s, zawsze można pominąć)</span></label><label class="check"><input type="checkbox" id="sgamefree"' + (S.settings.gameFree ? ' checked' : '') + '><span>Odblokowane gry na mapie działów bez limitu (domyślnie: dostępne po jednej serii zadań danego dnia)</span></label><p class="small muted" style="margin:-6px 0 0">Gra ćwiczy materiał z klasy dziecka. <button class="btn sm ghost" data-act="gamedemo">Wypróbuj grę</button></p><label class="check"><input type="checkbox" id="sgrade"' + (S.settings.showGrade ? ' checked' : '') + '><span>Pokazuj orientacyjną ocenę szkolną po próbnym sprawdzianie</span></label>';
     h += '<details><summary>Kod postępów (kopia zapasowa / przeniesienie na inne urządzenie)</summary><p class="small muted">Skopiuj kod i zachowaj go. Na innym urządzeniu wklej go poniżej i kliknij „Wczytaj". Kod zawiera tylko postępy w nauce.</p><textarea id="code" readonly></textarea><div class="bar2"><button class="btn sm" data-act="mkcode">Pokaż kod</button><button class="btn sm" data-act="copycode">Kopiuj</button></div><textarea id="incode" placeholder="Wklej tu kod postępów"></textarea><div class="bar2"><button class="btn sm" data-act="loadcode">Wczytaj kod</button></div><p id="codemsg" class="small"></p></details>';
     h += '<div><button class="btn sm ghost" data-act="reset">Wyczyść wszystkie postępy…</button></div></div></section>';
     return h;
@@ -1144,6 +1160,7 @@
   $app.addEventListener('change', (e) => {
     if (e.target.id === 'slen') { S.settings.seriesLen = +e.target.value; save(); }
     if (e.target.id === 'sgames') { S.settings.games = !!e.target.checked; save(); }
+    if (e.target.id === 'sgamefree') { S.settings.gameFree = !!e.target.checked; save(); }
     if (e.target.classList && e.target.classList.contains('alldz')) { const dd = e.target.closest('details'); dd.open = true; dd.querySelectorAll('input[name=t]').forEach(x => { x.checked = e.target.checked; }); }
     if (e.target.id === 'sgrade') { S.settings.showGrade = e.target.checked; save(); }
     if (e.target.id === 'tl' && S.prep) { S.prep.timeLimit = +e.target.value; save(); }
@@ -1221,6 +1238,7 @@
     if (act === 'cardnext') { advance(); save(); return rerenderLesson(); }
     if (act === 'game') { view = { name: 'game', from: view.from, sum: view.sum, back: view }; render(); window.scrollTo(0, 0); return; }
     if (act === 'nogame') { if (view.sum) view.sum.gameDone = true; return render(); }
+    if (act === 'dzgame') { if (!gameAllowedToday()) { toast('Najpierw zrób dziś jedną serię zadań – potem gra! 💪'); return; } view = { name: 'game', back: { name: 'start' } }; render(); window.scrollTo(0, 0); return; }
     if (act === 'gamedemo') { view = { name: 'game', back: view }; render(); window.scrollTo(0, 0); return; }
     if (act === 'next') { advance(); save(); if (view.name === 'summary') return render(); return rerenderLesson(); }
     if (act === 'checkans') return onCheck();
